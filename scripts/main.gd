@@ -2,9 +2,11 @@ extends Node
 
 const UI_FONT := preload("res://assets/fonts/NotoSansSC.ttf")
 const HERO_PORTRAIT := preload("res://assets/actors/hero/portrait_actual.png")
+const MINATO_TEXTURE := preload("res://AI资源库/火影忍者/波风水门/sprite.png")
 const BATTLE_MUSIC := preload("res://assets/audio/battle.ogg")
 const BOSS_MUSIC := preload("res://assets/audio/boss.ogg")
 const BATTLE_ARENA_SCENE: PackedScene = preload("res://scenes/gameplay/battle_arena.tscn")
+const VIRTUAL_JOYSTICK_SCENE: PackedScene = preload("res://scenes/ui/virtual_joystick.tscn")
 const SFX_STREAMS := {
 	&"slash": preload("res://assets/audio/slash.wav"),
 	&"hit": preload("res://assets/audio/hit.wav"),
@@ -25,6 +27,7 @@ var sfx_players: Array[AudioStreamPlayer] = []
 var sfx_index := 0
 var hud_root: Control
 var hp_bar: ProgressBar
+var hp_value_label: Label
 var xp_bar: ProgressBar
 var xp_label: Label
 var level_label: Label
@@ -36,11 +39,15 @@ var boss_panel: PanelContainer
 var boss_bar: ProgressBar
 var boss_value_label: Label
 var announcement_label: Label
+var movement_joystick: MovementJoystick
+var touch_pause_button: Button
 var modal_overlay: Control
 var level_options: Array[SkillDefinition] = []
 var leveling := false
 var pause_open := false
 var game_running := false
+var character_select_open := false
+var selected_character_id: StringName = &"black_sword"
 
 
 func _ready() -> void:
@@ -79,6 +86,11 @@ func _ready() -> void:
 	elif "--qa-levelup" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_trigger_levelup")
+	elif "--qa-minato" in OS.get_cmdline_user_args():
+		selected_character_id = &"minato"
+		call_deferred("_start_game")
+	elif "--qa-character-select" in OS.get_cmdline_user_args():
+		call_deferred("_show_character_selection")
 
 
 func _exit_tree() -> void:
@@ -112,6 +124,14 @@ func _qa_enable_orbit() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if character_select_open:
+		if event.is_action_pressed("choose_1"):
+			_select_character(&"black_sword")
+		elif event.is_action_pressed("choose_2"):
+			_select_character(&"minato")
+		elif event.is_action_pressed("pause"):
+			_show_title()
+		return
 	if leveling:
 		if event.is_action_pressed("choose_1"):
 			_choose_level_option(0)
@@ -155,10 +175,13 @@ func _style_box(fill: Color, border: Color, width: int, radius: int, content: in
 
 
 func _clear_ui() -> void:
+	_release_virtual_movement()
 	for child in ui_root.get_children():
 		child.queue_free()
 	modal_overlay = null
 	hud_root = null
+	movement_joystick = null
+	touch_pause_button = null
 
 
 func _clear_world() -> void:
@@ -169,6 +192,7 @@ func _clear_world() -> void:
 
 func _show_title() -> void:
 	game_running = false
+	character_select_open = false
 	leveling = false
 	pause_open = false
 	get_tree().paused = false
@@ -216,8 +240,8 @@ func _show_title() -> void:
 	var subtitle := _label("风过荒寺，百鬼夜行。唯有一剑，可破黎明。", 24, Color("b9c6d8"))
 	content.add_child(subtitle)
 	content.add_child(_spacer(26))
-	var start := _button("踏入荒寺", Vector2(310, 58))
-	start.pressed.connect(func() -> void: _play_sfx(&"ui"); _start_game())
+	var start := _button("选择角色", Vector2(310, 58))
+	start.pressed.connect(func() -> void: _play_sfx(&"ui"); _show_character_selection())
 	content.add_child(start)
 	var help := _button("玩法说明", Vector2(310, 54))
 	content.add_child(help)
@@ -237,6 +261,122 @@ func _show_title() -> void:
 	content.add_child(_spacer(6))
 	var credits := _label("CC0 美术与音频：Pixel-Boy & AAA · 引擎：Godot 4.7", 16, Color("77879f"))
 	content.add_child(credits)
+
+
+func _show_character_selection() -> void:
+	game_running = false
+	character_select_open = true
+	leveling = false
+	pause_open = false
+	get_tree().paused = false
+	_clear_world()
+	_clear_ui()
+	var background := ColorRect.new()
+	background.name = "CharacterSelectionBackground"
+	background.color = Color("080f1b")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_root.add_child(background)
+	var header := _label("择一人 · 夜闯荒寺", 42, Color("f2ead7"))
+	header.position = Vector2(0, 34)
+	header.size = Vector2(1280, 64)
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(header)
+	var hint := _label("不同角色拥有不同的初始招式（按 1 / 2 选择）", 19, Color("9fb2cc"))
+	hint.position = Vector2(0, 94)
+	hint.size = Vector2(1280, 36)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(hint)
+	var cards := HBoxContainer.new()
+	cards.name = "CharacterCards"
+	cards.set_anchors_preset(Control.PRESET_CENTER)
+	cards.offset_left = -420
+	cards.offset_top = -214
+	cards.offset_right = 420
+	cards.offset_bottom = 240
+	cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards.add_theme_constant_override("separation", 34)
+	background.add_child(cards)
+	cards.add_child(_character_card(
+		&"black_sword",
+		"1 · 黑剑客",
+		"初始招式：黑剑·横扫",
+		"近身剑客，以宽阔剑弧斩开群敌。",
+		HERO_PORTRAIT,
+		Color("a9c7ef")
+	))
+	cards.add_child(_character_card(
+		&"minato",
+		"2 · 波风水门",
+		"初始招式：螺旋丸",
+		"联动忍者，发射高速旋转的查克拉球。",
+		_minato_portrait_texture(),
+		Color("64d4ff")
+	))
+	var back := _button("返回标题", Vector2(240, 48))
+	back.name = "BackToTitleButton"
+	back.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	back.offset_left = -120
+	back.offset_top = -84
+	back.offset_right = 120
+	back.offset_bottom = -36
+	back.pressed.connect(_show_title)
+	background.add_child(back)
+
+
+func _character_card(
+	id: StringName,
+	display_name: String,
+	initial_skill: String,
+	description: String,
+	portrait_texture: Texture2D,
+	accent: Color
+) -> Button:
+	var card := _button("", Vector2(360, 430))
+	card.name = "MinatoCharacterCard" if id == &"minato" else "BlackSwordCharacterCard"
+	card.add_theme_stylebox_override("normal", _style_box(Color("111a2a"), Color(accent, 0.72), 3, 14, 18))
+	card.add_theme_stylebox_override("hover", _style_box(Color("1b2b43"), accent, 4, 14, 18))
+	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 10)
+	card.add_child(column)
+	var portrait := TextureRect.new()
+	portrait.texture = portrait_texture
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.custom_minimum_size = Vector2(300, 245)
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(portrait)
+	var name_label := _label(display_name, 27, Color("f6f1e5"))
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(name_label)
+	var skill_label := _label(initial_skill, 19, accent)
+	skill_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(skill_label)
+	var description_label := _label(description, 16, Color("b6c4d8"))
+	description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description_label.custom_minimum_size = Vector2(310, 52)
+	column.add_child(description_label)
+	card.pressed.connect(_select_character.bind(id))
+	return card
+
+
+func _minato_portrait_texture() -> AtlasTexture:
+	var portrait := AtlasTexture.new()
+	portrait.atlas = MINATO_TEXTURE
+	portrait.region = Rect2(189, 126, 21, 42)
+	return portrait
+
+
+func _select_character(id: StringName) -> void:
+	if id not in [&"black_sword", &"minato"]:
+		return
+	selected_character_id = id
+	character_select_open = false
+	_play_sfx(&"ui")
+	_start_game()
 
 
 func _volume_row(title: String, bus: StringName) -> Control:
@@ -259,13 +399,24 @@ func _volume_row(title: String, bus: StringName) -> Control:
 
 func _start_game() -> void:
 	get_tree().paused = false
+	character_select_open = false
 	_clear_world()
 	_clear_ui()
 	game_running = true
 	arena = BATTLE_ARENA_SCENE.instantiate() as Arena
+	arena.selected_character_id = selected_character_id
 	world_holder.add_child(arena)
 	_connect_arena()
 	_build_hud()
+	_refresh_hud_from_arena()
+
+
+func _refresh_hud_from_arena() -> void:
+	if not is_instance_valid(arena):
+		return
+	_update_health(arena.player.health, arena.player.max_health)
+	_update_xp(arena.current_xp, arena.required_xp, arena.player_level)
+	_update_skills(arena.skill_system.levels, arena.skill_system.active_ids, arena.skill_system.passive_ids)
 
 
 func _connect_arena() -> void:
@@ -302,12 +453,19 @@ func _build_hud() -> void:
 	hp_row.add_child(hp_title)
 	hp_bar = ProgressBar.new()
 	hp_bar.custom_minimum_size = Vector2(325, 24)
-	hp_bar.show_percentage = true
+	hp_bar.show_percentage = false
 	hp_bar.max_value = 100
 	hp_bar.value = 100
 	hp_bar.add_theme_stylebox_override("background", _style_box(Color("161d2b"), Color("3b4659"), 1, 5, 0))
 	hp_bar.add_theme_stylebox_override("fill", _style_box(Color("b94155"), Color("ef7788"), 1, 5, 0))
 	hp_row.add_child(hp_bar)
+	hp_value_label = _label("100", 16, Color("fff4f4"))
+	hp_value_label.name = "HealthValueLabel"
+	hp_value_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hp_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hp_value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hp_value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hp_bar.add_child(hp_value_label)
 	var info_row := HBoxContainer.new()
 	info_row.add_theme_constant_override("separation", 18)
 	top_box.add_child(info_row)
@@ -372,11 +530,12 @@ func _build_hud() -> void:
 	xp_bar.add_theme_stylebox_override("fill", _style_box(Color("4fb9d1"), Color("91ecff"), 1, 5, 0))
 	hud_root.add_child(xp_bar)
 	xp_label = _label("修为 0 / 11", 15, Color("d7f8ff"))
-	xp_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	xp_label.offset_left = 30
+	xp_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	xp_label.offset_left = -130
 	xp_label.offset_top = -58
-	xp_label.offset_right = 230
+	xp_label.offset_right = 130
 	xp_label.offset_bottom = -36
+	xp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud_root.add_child(xp_label)
 	announcement_label = _label("", 30, Color.WHITE)
 	announcement_label.position = Vector2(330, 138)
@@ -384,12 +543,49 @@ func _build_hud() -> void:
 	announcement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	announcement_label.modulate.a = 0.0
 	hud_root.add_child(announcement_label)
+	movement_joystick = VIRTUAL_JOYSTICK_SCENE.instantiate() as MovementJoystick
+	movement_joystick.visible = _touch_controls_supported()
+	movement_joystick.direction_changed.connect(_on_virtual_movement_changed)
+	hud_root.add_child(movement_joystick)
+	touch_pause_button = _button("暂停", Vector2(112, 50))
+	touch_pause_button.name = "TouchPauseButton"
+	touch_pause_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	touch_pause_button.offset_left = -136
+	touch_pause_button.offset_top = 20
+	touch_pause_button.offset_right = -24
+	touch_pause_button.offset_bottom = 70
+	touch_pause_button.visible = _touch_controls_supported()
+	touch_pause_button.pressed.connect(_toggle_pause)
+	hud_root.add_child(touch_pause_button)
+
+
+func _touch_controls_supported() -> bool:
+	return DisplayServer.is_touchscreen_available() or "--qa-touch" in OS.get_cmdline_user_args()
+
+
+func _on_virtual_movement_changed(direction: Vector2) -> void:
+	if is_instance_valid(arena) and is_instance_valid(arena.player):
+		arena.player.set_virtual_move_input(direction)
+
+
+func _release_virtual_movement() -> void:
+	if is_instance_valid(movement_joystick):
+		movement_joystick.reset_input()
+	if is_instance_valid(arena) and is_instance_valid(arena.player):
+		arena.player.set_virtual_move_input(Vector2.ZERO)
+
+
+func _set_touch_movement_enabled(value: bool) -> void:
+	if is_instance_valid(movement_joystick):
+		movement_joystick.set_input_enabled(value)
 
 
 func _update_health(current: float, maximum: float) -> void:
 	if is_instance_valid(hp_bar):
 		hp_bar.max_value = maximum
 		hp_bar.value = current
+	if is_instance_valid(hp_value_label):
+		hp_value_label.text = str(roundi(current))
 
 
 func _update_xp(current: int, required: int, level: int) -> void:
@@ -448,13 +644,18 @@ func _show_level_up(level: int, options: Array[SkillDefinition]) -> void:
 		return
 	leveling = true
 	level_options = options
+	_release_virtual_movement()
+	_set_touch_movement_enabled(false)
 	get_tree().paused = true
 	_play_sfx(&"level_up")
 	modal_overlay = _modal_background()
 	ui_root.add_child(modal_overlay)
 	var panel := PanelContainer.new()
-	panel.position = Vector2(100, 95)
-	panel.size = Vector2(1080, 530)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -540
+	panel.offset_top = -265
+	panel.offset_right = 540
+	panel.offset_bottom = 265
 	panel.theme = game_theme
 	modal_overlay.add_child(panel)
 	var box := VBoxContainer.new()
@@ -510,6 +711,7 @@ func _choose_level_option(index: int) -> void:
 	modal_overlay = null
 	get_tree().paused = false
 	arena.choose_upgrade(definition.id)
+	_set_touch_movement_enabled(true)
 
 
 func _toggle_pause() -> void:
@@ -521,14 +723,20 @@ func _toggle_pause() -> void:
 		if is_instance_valid(modal_overlay):
 			modal_overlay.queue_free()
 		modal_overlay = null
+		_set_touch_movement_enabled(true)
 		return
 	pause_open = true
+	_release_virtual_movement()
+	_set_touch_movement_enabled(false)
 	get_tree().paused = true
 	modal_overlay = _modal_background()
 	ui_root.add_child(modal_overlay)
 	var panel := PanelContainer.new()
-	panel.position = Vector2(430, 150)
-	panel.size = Vector2(420, 420)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -210
+	panel.offset_top = -210
+	panel.offset_right = 210
+	panel.offset_bottom = 210
 	panel.theme = game_theme
 	modal_overlay.add_child(panel)
 	var box := VBoxContainer.new()
@@ -578,12 +786,17 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	game_running = false
 	leveling = false
 	pause_open = false
+	_release_virtual_movement()
+	_set_touch_movement_enabled(false)
 	get_tree().paused = true
 	modal_overlay = _modal_background()
 	ui_root.add_child(modal_overlay)
 	var panel := PanelContainer.new()
-	panel.position = Vector2(360, 100)
-	panel.size = Vector2(560, 520)
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -280
+	panel.offset_top = -260
+	panel.offset_right = 280
+	panel.offset_bottom = 260
 	panel.theme = game_theme
 	modal_overlay.add_child(panel)
 	var box := VBoxContainer.new()
@@ -625,6 +838,8 @@ func _button(text: String, minimum: Vector2) -> Button:
 	button.theme = game_theme
 	button.custom_minimum_size = minimum
 	button.focus_mode = Control.FOCUS_ALL
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	return button
 
 

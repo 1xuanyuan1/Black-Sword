@@ -21,6 +21,11 @@ var turn_speed := 5.0
 var bounces_remaining := 0
 var bounce_count := 0
 var homing_lockout := 0.0
+var explosion_radius := 0.0
+var explosion_damage_multiplier := 0.0
+var split_count := 0
+var split_damage_multiplier := 0.5
+var impact_triggered := false
 
 
 static func create(options: Dictionary) -> CombatProjectile:
@@ -40,6 +45,11 @@ static func create(options: Dictionary) -> CombatProjectile:
 	projectile.returning = options.get("returning", false)
 	projectile.knockback = options.get("knockback", 30.0)
 	projectile.bounces_remaining = options.get("bounces", 0)
+	projectile.turn_speed = options.get("turn_speed", 5.0)
+	projectile.explosion_radius = options.get("explosion_radius", 0.0)
+	projectile.explosion_damage_multiplier = options.get("explosion_damage_multiplier", 0.0)
+	projectile.split_count = options.get("split_count", 0)
+	projectile.split_damage_multiplier = options.get("split_damage_multiplier", 0.5)
 	projectile.z_index = 12
 	return projectile
 
@@ -106,11 +116,62 @@ func _check_enemy_hits() -> void:
 			continue
 		if global_position.distance_squared_to(enemy.global_position) <= pow(radius + enemy.hit_radius, 2.0):
 			hit_ids[id] = true
-			enemy.take_damage(DamageEvent.create(damage, owner_node, direction, knockback, false, [&"projectile"]))
+			var damage_tags: Array[StringName] = [&"projectile"]
+			if projectile_kind == &"rasengan":
+				damage_tags.append(&"rasengan")
+			enemy.take_damage(DamageEvent.create(damage, owner_node, direction, knockback, false, damage_tags))
+			if projectile_kind == &"rasengan":
+				_trigger_rasengan_impact(enemy)
 			pierce -= 1
 			if pierce < 0:
 				queue_free()
 				return
+
+
+func _trigger_rasengan_impact(primary_enemy: Node) -> void:
+	if impact_triggered:
+		return
+	impact_triggered = true
+	var visual_radius: float = maxf(radius * 1.65, explosion_radius)
+	arena.add_effect(EffectNode.create(&"pulse", global_position, {"radius": visual_radius, "duration": 0.30, "color": Color("69d8ff")}))
+	if explosion_radius > 0.0 and explosion_damage_multiplier > 0.0:
+		for other_enemy in arena.enemies.duplicate():
+			if not is_instance_valid(other_enemy) or other_enemy == primary_enemy or other_enemy.dead:
+				continue
+			if global_position.distance_to(other_enemy.global_position) <= explosion_radius + other_enemy.hit_radius:
+				var blast_direction: Vector2 = global_position.direction_to(other_enemy.global_position)
+				other_enemy.take_damage(DamageEvent.create(
+					damage * explosion_damage_multiplier,
+					owner_node,
+					blast_direction,
+					knockback * 0.72,
+					false,
+					[&"projectile", &"rasengan", &"area"],
+				))
+	if split_count > 0:
+		_spawn_rasengan_fragments()
+
+
+func _spawn_rasengan_fragments() -> void:
+	for i in range(split_count):
+		var spread: float = remap(float(i), 0.0, float(maxi(split_count - 1, 1)), -0.82, 0.82)
+		arena.add_projectile(CombatProjectile.create({
+			"arena": arena,
+			"owner": owner_node,
+			"position": global_position,
+			"direction": direction.rotated(spread),
+			"speed": speed * 1.16,
+			"damage": damage * split_damage_multiplier,
+			"radius": maxf(radius * 0.56, 12.0),
+			"pierce": 0,
+			"lifetime": 1.45,
+			"kind": &"rasengan",
+			"homing": true,
+			"turn_speed": 5.2,
+			"knockback": knockback * 0.55,
+			# 分裂弹不再继续分裂，避免指数增长。
+			"split_count": 0,
+		}))
 
 
 func _check_player_hit() -> void:
@@ -130,6 +191,14 @@ func _draw() -> void:
 		&"orb":
 			draw_circle(Vector2.ZERO, radius, Color(glow, 0.32))
 			draw_circle(Vector2.ZERO, radius * 0.52, glow)
+		&"rasengan":
+			var spin: float = elapsed * 12.0
+			draw_circle(Vector2.ZERO, radius * 1.15, Color(0.24, 0.78, 1.0, 0.18))
+			draw_circle(Vector2.ZERO, radius * 0.82, Color("72ddff"))
+			draw_circle(Vector2.ZERO, radius * 0.44, Color("d9f8ff"))
+			for i in range(3):
+				var start_angle: float = spin + TAU * float(i) / 3.0
+				draw_arc(Vector2.ZERO, radius * (0.54 + float(i) * 0.12), start_angle, start_angle + PI * 1.25, 18, Color("e5fbff"), 2.4, true)
 		&"sword":
 			draw_colored_polygon(PackedVector2Array([Vector2(-3, -18), Vector2(3, -18), Vector2(4, 9), Vector2.ZERO, Vector2(-4, 9)]), glow)
 			draw_line(Vector2(-8, 8), Vector2(8, 8), glow, 3.0)

@@ -18,12 +18,12 @@ var orbit_visuals: Array[Sprite2D] = []
 var rng := RandomNumberGenerator.new()
 
 
-func setup(new_arena: Node, new_player: PlayerActor, skill_definitions: Dictionary) -> void:
+func setup(new_arena: Node, new_player: PlayerActor, skill_definitions: Dictionary, initial_skill_id: StringName = &"black_slash") -> void:
 	arena = new_arena
 	player = new_player
 	definitions = skill_definitions
 	rng.randomize()
-	upgrade(&"black_slash")
+	upgrade(initial_skill_id)
 
 
 func process_skills(delta: float) -> void:
@@ -116,6 +116,7 @@ func _cast_skill(id: StringName) -> void:
 	cooldowns[id] = float(stats.get("cooldown", 1.0)) * cooldown_multiplier()
 	match id:
 		&"black_slash": _cast_black_slash(stats)
+		&"rasengan": _cast_rasengan(stats)
 		&"flying_sword": _cast_flying_sword(stats)
 		&"sword_wave": _cast_sword_wave(stats)
 		&"orbit_blades": _cast_orbit(stats)
@@ -123,6 +124,39 @@ func _cast_skill(id: StringName) -> void:
 		&"frost": _cast_frost(stats)
 		&"sun_palm": _cast_sun_palm(stats)
 		&"sword_rain": _cast_sword_rain(stats)
+
+
+func _cast_rasengan(stats: Dictionary) -> void:
+	var target: Variant = arena.nearest_enemy(player.global_position)
+	if not is_instance_valid(target):
+		cooldowns[&"rasengan"] = 0.25
+		return
+	var base_direction: Vector2 = player.global_position.direction_to(target.global_position)
+	player.last_direction = base_direction
+	player.play_attack()
+	var count: int = stats.get("count", 1)
+	for i in range(count):
+		var offset: float = (float(i) - float(count - 1) * 0.5) * 0.20
+		arena.add_projectile(CombatProjectile.create({
+			"arena": arena,
+			"owner": player,
+			"position": player.global_position + base_direction * 22.0,
+			"direction": base_direction.rotated(offset),
+			"speed": float(stats.get("speed", 290.0)),
+			"damage": float(stats.get("damage", 25.0)) * damage_multiplier(),
+			"radius": float(stats.get("radius", 18.0)),
+			"pierce": int(stats.get("pierce", 0)),
+			"lifetime": 2.4,
+			"kind": &"rasengan",
+			"homing": true,
+			"turn_speed": 3.8,
+			"knockback": 115.0,
+			"explosion_radius": float(stats.get("aoe_radius", 0.0)),
+			"explosion_damage_multiplier": float(stats.get("aoe_damage", 0.0)),
+			"split_count": int(stats.get("split_count", 0)),
+			"split_damage_multiplier": float(stats.get("split_damage", 0.5)),
+		}))
+	arena.play_sfx(&"magic")
 
 
 func _cast_black_slash(stats: Dictionary) -> void:

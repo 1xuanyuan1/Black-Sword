@@ -3,6 +3,29 @@ extends Node2D
 
 signal death_animation_finished
 
+const OCAD_WALK_DOWN := [
+	Rect2(126, 0, 21, 42), Rect2(147, 0, 21, 42), Rect2(168, 0, 21, 42),
+	Rect2(189, 0, 21, 42), Rect2(210, 0, 21, 42), Rect2(231, 0, 21, 42),
+]
+const OCAD_WALK_UP := [
+	Rect2(126, 42, 21, 42), Rect2(147, 42, 21, 42), Rect2(168, 42, 21, 42),
+	Rect2(189, 42, 21, 42), Rect2(210, 42, 21, 42), Rect2(231, 42, 21, 42),
+]
+const OCAD_WALK_SIDE := [
+	Rect2(0, 84, 21, 42), Rect2(21, 84, 21, 42), Rect2(42, 84, 21, 42),
+	Rect2(63, 84, 21, 42), Rect2(84, 84, 21, 42), Rect2(105, 84, 21, 42),
+]
+const OCAD_CAST := [
+	Rect2(0, 168, 42, 42), Rect2(42, 168, 42, 42), Rect2(84, 168, 42, 42),
+	Rect2(126, 168, 42, 42), Rect2(168, 168, 42, 42), Rect2(210, 168, 42, 42),
+	Rect2(0, 210, 42, 42), Rect2(42, 210, 42, 42),
+]
+const OCAD_IDLE_DOWN := Rect2(189, 126, 21, 42)
+const OCAD_IDLE_SIDE := Rect2(210, 126, 21, 42)
+const OCAD_IDLE_UP := Rect2(231, 126, 21, 42)
+const OCAD_HURT := Rect2(168, 126, 21, 42)
+const OCAD_DEATH := Rect2(189, 210, 63, 42)
+
 @onready var sprite: Sprite2D = $CharacterSprite
 var visual_kind: StringName = &"character"
 var facing := Vector2.DOWN
@@ -21,9 +44,16 @@ func setup(texture: Texture2D, kind: StringName, scale_factor: float, tint: Colo
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.centered = true
 	sprite.modulate = tint
+	sprite.region_enabled = false
+	sprite.flip_h = false
 	if kind == &"hero_actual":
 		sprite.hframes = 6
 		sprite.vframes = 9
+	elif kind == &"ocad_character":
+		sprite.hframes = 1
+		sprite.vframes = 1
+		sprite.region_enabled = true
+		sprite.region_rect = OCAD_IDLE_DOWN
 	elif kind == &"character":
 		sprite.hframes = 4
 		sprite.vframes = 7
@@ -94,6 +124,9 @@ func play_death() -> void:
 func _update_frame() -> void:
 	if sprite.texture == null:
 		return
+	if visual_kind == &"ocad_character":
+		_update_ocad_frame()
+		return
 	var direction_frame := _direction_frame(facing)
 	if visual_kind == &"hero_actual":
 		sprite.frame_coords.x = int(animation_time * (9.0 if state == &"move" else 7.0)) % 6
@@ -115,6 +148,40 @@ func _update_frame() -> void:
 	else:
 		sprite.frame_coords.x = direction_frame
 		sprite.frame_coords.y = int(animation_time * (9.0 if state == &"move" else 5.0)) % 4
+
+
+func _update_ocad_frame() -> void:
+	sprite.flip_h = false
+	match state:
+		&"move":
+			var frames: Array
+			if absf(facing.x) > absf(facing.y):
+				frames = OCAD_WALK_SIDE
+				sprite.flip_h = facing.x > 0.0
+			elif facing.y < 0.0:
+				frames = OCAD_WALK_UP
+			else:
+				frames = OCAD_WALK_DOWN
+			var frame_index: int = int(animation_time * 10.0) % frames.size()
+			var walk_region: Rect2 = frames[frame_index]
+			sprite.region_rect = walk_region
+		&"attack":
+			var cast_index: int = int(animation_time * 12.0) % OCAD_CAST.size()
+			var cast_region: Rect2 = OCAD_CAST[cast_index]
+			sprite.region_rect = cast_region
+			sprite.flip_h = facing.x > 0.0
+		&"hurt":
+			sprite.region_rect = OCAD_HURT
+		&"death":
+			sprite.region_rect = OCAD_DEATH
+		_:
+			if absf(facing.x) > absf(facing.y):
+				sprite.region_rect = OCAD_IDLE_SIDE
+				sprite.flip_h = facing.x > 0.0
+			elif facing.y < 0.0:
+				sprite.region_rect = OCAD_IDLE_UP
+			else:
+				sprite.region_rect = OCAD_IDLE_DOWN
 
 
 func _hero_direction_row(direction: Vector2) -> int:

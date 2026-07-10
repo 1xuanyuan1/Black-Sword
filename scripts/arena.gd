@@ -15,6 +15,10 @@ signal music_requested(id: StringName)
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
+const PLAYER_SCENES: Dictionary = {
+	&"black_sword": preload("res://scenes/actors/player.tscn"),
+	&"minato": preload("res://scenes/actors/player_minato.tscn"),
+}
 const ENEMY_SCENES: Dictionary = {
 	&"corpse": preload("res://scenes/actors/enemies/corpse.tscn"),
 	&"hound": preload("res://scenes/actors/enemies/hound.tscn"),
@@ -24,7 +28,7 @@ const ENEMY_SCENES: Dictionary = {
 
 @onready var backdrop: ArenaBackdrop = $Environment/AbandonedTempleMap
 @onready var actor_layer: Node2D = $ActorLayer
-@onready var player: PlayerActor = $ActorLayer/PlayerCharacter
+@onready var player_spawn_point: Marker2D = $ActorLayer/PlayerSpawnPoint
 @onready var pickup_layer: Node2D = $PickupLayer
 @onready var projectile_layer: Node2D = $ProjectileLayer
 @onready var effect_layer: Node2D = $EffectLayer
@@ -32,6 +36,8 @@ const ENEMY_SCENES: Dictionary = {
 
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
+var selected_character_id: StringName = &"black_sword"
+var player: PlayerActor
 var enemies: Array = []
 var run_active := true
 var elapsed := 0.0
@@ -51,11 +57,14 @@ var rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	rng.randomize()
 	backdrop.setup(bounds)
-	player.global_position = Vector2.ZERO
+	var player_scene: PackedScene = PLAYER_SCENES.get(selected_character_id, PLAYER_SCENES[&"black_sword"]) as PackedScene
+	player = player_scene.instantiate() as PlayerActor
+	actor_layer.add_child(player)
+	player.global_position = player_spawn_point.global_position
 	player.setup(self)
 	player.health_changed.connect(func(current: float, maximum: float) -> void: player_health_changed.emit(current, maximum))
 	player.died.connect(_on_player_death)
-	skill_system.setup(self, player, registry.skills)
+	skill_system.setup(self, player, registry.skills, player.initial_skill_id)
 	skill_system.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
 	xp_changed.emit(current_xp, required_xp, player_level)
 	player_health_changed.emit(player.health, player.max_health)
@@ -104,14 +113,15 @@ func spawn_enemy(id: StringName, at_position: Vector2, is_elite: bool = false) -
 
 
 func enemy_health_multiplier() -> float:
-	# 每一夜提供明确的血量台阶，第四夜内部再持续增长。
+	# 每一夜提供明确的血量台阶；三分钟后进入高压阶段，第四夜继续增长。
 	if elapsed < 90.0:
-		return 1.0 + elapsed / 90.0 * 0.18
+		# 第一夜作为构筑起步期：尸傀约 23~31 点生命，避免初始技能刮痧。
+		return 0.68 + elapsed / 90.0 * 0.22
 	if elapsed < 180.0:
 		return 1.35 + (elapsed - 90.0) / 90.0 * 0.22
 	if elapsed < 270.0:
-		return 1.75 + (elapsed - 180.0) / 90.0 * 0.25
-	return minf(2.15 + (elapsed - 270.0) / 120.0 * 0.45, 2.60)
+		return 2.05 + (elapsed - 180.0) / 90.0 * 0.30
+	return minf(2.65 + (elapsed - 270.0) / 120.0 * 0.55, 3.20)
 
 
 func summon_minions(count: int) -> void:

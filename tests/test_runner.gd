@@ -30,9 +30,21 @@ func _check_actor_preset(path: String, root_name: String, script_path: String) -
 
 
 func _run() -> void:
+	var repository_script: GDScript = load("res://addons/npc_library_tool/core/npc_repository.gd") as GDScript
+	var npc_repository: RefCounted = repository_script.new() as RefCounted
+	var yitu_items: Array = npc_repository.call("scan_npc_files", "res://AI资源库/一图全动作")
+	var naruto_items: Array = npc_repository.call("scan_npc_files", "res://AI资源库/火影忍者")
+	_check(yitu_items.size() >= 2, "AI资源库的一图全动作分类可以扫描到原插件示例素材")
+	_check(naruto_items.size() >= 2, "AI资源库的火影忍者分类可以扫描到波风水门等素材")
 	var registry := ContentRegistry.new()
-	_check(registry.validate().is_empty(), "内容注册表包含 10 个五级技能、4 类敌人与 4 个波次")
+	var rasengan_definition: SkillDefinition = registry.skills[&"rasengan"]
+	var rasengan_level_two: Dictionary = rasengan_definition.stats(2)
+	var rasengan_level_three: Dictionary = rasengan_definition.stats(3)
+	var rasengan_level_four: Dictionary = rasengan_definition.stats(4)
+	var rasengan_level_five: Dictionary = rasengan_definition.stats(5)
+	_check(registry.validate().is_empty(), "内容注册表包含 11 个五级技能、4 类敌人与 4 个波次")
 	_check_actor_preset("res://scenes/actors/player.tscn", "PlayerCharacter", "res://scripts/player_actor.gd")
+	_check_actor_preset("res://scenes/actors/player_minato.tscn", "MinatoPlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/corpse.tscn", "CorpseEnemy", "res://scripts/enemy_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/hound.tscn", "ShadowHoundEnemy", "res://scripts/enemy_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/lantern.tscn", "LanternSpiritEnemy", "res://scripts/enemy_actor.gd")
@@ -49,13 +61,88 @@ func _run() -> void:
 	var battle_root: Node = battle_scene.instantiate()
 	_check(battle_root.name == "BattleArena", "组装后的战斗场景拥有职责明确的根节点名称")
 	_check(battle_root.get_node_or_null("Environment/AbandonedTempleMap") is ArenaBackdrop, "战斗场景引用独立地图预设")
-	_check(battle_root.get_node_or_null("ActorLayer/PlayerCharacter") is PlayerActor, "战斗场景引用独立玩家预设")
+	_check(battle_root.get_node_or_null("ActorLayer/PlayerSpawnPoint") is Marker2D, "战斗场景提供所选玩家预设的出生点")
 	_check(battle_root.get_node_or_null("GameplaySystems/SkillSystem") is SkillSystem, "战斗场景显式组织玩法系统")
 	_check(battle_root.get_node_or_null("ProjectileLayer") is Node2D and battle_root.get_node_or_null("PickupLayer") is Node2D and battle_root.get_node_or_null("EffectLayer") is Node2D, "战斗场景按职责拆分运行时对象层")
 	battle_root.free()
+	var joystick_scene: PackedScene = load("res://scenes/ui/virtual_joystick.tscn") as PackedScene
+	var joystick: MovementJoystick = joystick_scene.instantiate() as MovementJoystick
+	root.add_child(joystick)
+	await process_frame
+	joystick._update_direction(joystick.size * 0.5 + Vector2(joystick.joystick_radius, 0.0))
+	_check(joystick.mouse_filter == Control.MOUSE_FILTER_STOP and joystick.direction.x > 0.99, "移动端虚拟摇杆可捕获触摸并输出方向")
+	joystick.reset_input()
+	_check(joystick.direction == Vector2.ZERO, "虚拟摇杆释放后会清空移动方向")
+	joystick.queue_free()
+	_check(int(ProjectSettings.get_setting("display/window/handheld/orientation", -1)) == 4, "移动端窗口使用横屏方向")
+	_check(bool(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", false)), "触摸可映射到角色卡和菜单按钮")
+	var minato_arena: Arena = battle_scene.instantiate() as Arena
+	minato_arena.selected_character_id = &"minato"
+	root.add_child(minato_arena)
+	await process_frame
+	await process_frame
+	minato_arena.spawn_timer = 9999.0
+	_check(minato_arena.player.character_id == &"minato", "角色选择可实例化独立的波风水门预设")
+	_check(minato_arena.skill_system.levels.get(&"rasengan", 0) == 1 and minato_arena.skill_system.levels.get(&"black_slash", 0) == 0, "波风水门以螺旋丸而非黑剑横扫开局")
+	var rasengan_target: EnemyActor = minato_arena.spawn_enemy(&"corpse", Vector2(420, 0), false)
+	minato_arena.skill_system.cooldowns[&"rasengan"] = 0.0
+	minato_arena.skill_system.process_skills(0.1)
+	await process_frame
+	var found_rasengan := false
+	for projectile_node in root.get_tree().get_nodes_in_group("projectiles"):
+		var combat_projectile: CombatProjectile = projectile_node as CombatProjectile
+		if combat_projectile != null and combat_projectile.projectile_kind == &"rasengan":
+			found_rasengan = true
+			break
+	_check(is_instance_valid(rasengan_target) and found_rasengan, "螺旋丸会自动索敌并生成专用投射物")
+	var area_target: EnemyActor = minato_arena.spawn_enemy(&"corpse", Vector2(260, 0), false)
+	var area_neighbor: EnemyActor = minato_arena.spawn_enemy(&"corpse", Vector2(300, 0), false)
+	var neighbor_health_before: float = area_neighbor.health
+	var area_rasengan := CombatProjectile.create({
+		"arena": minato_arena,
+		"owner": minato_arena.player,
+		"position": area_target.global_position,
+		"direction": Vector2.RIGHT,
+		"speed": 0.0,
+		"damage": float(rasengan_level_two.get("damage", 33.0)),
+		"radius": float(rasengan_level_two.get("radius", 20.0)),
+		"pierce": 0,
+		"kind": &"rasengan",
+		"explosion_radius": float(rasengan_level_two.get("aoe_radius", 78.0)),
+		"explosion_damage_multiplier": float(rasengan_level_two.get("aoe_damage", 0.65)),
+	})
+	minato_arena.add_projectile(area_rasengan)
+	area_rasengan._check_enemy_hits()
+	_check(area_neighbor.health < neighbor_health_before, "二级螺旋丸的命中爆炸会伤害附近多个敌人")
+	var projectile_count_before_split: int = root.get_tree().get_nodes_in_group("projectiles").size()
+	var split_rasengan := CombatProjectile.create({
+		"arena": minato_arena,
+		"owner": minato_arena.player,
+		"position": Vector2(180, 0),
+		"direction": Vector2.RIGHT,
+		"speed": 320.0,
+		"damage": 30.0,
+		"radius": 28.0,
+		"kind": &"rasengan",
+		"split_count": 3,
+		"split_damage_multiplier": 0.55,
+	})
+	minato_arena.add_projectile(split_rasengan)
+	split_rasengan._trigger_rasengan_impact(null)
+	var projectile_count_after_split: int = root.get_tree().get_nodes_in_group("projectiles").size()
+	_check(projectile_count_after_split == projectile_count_before_split + 4, "四级螺旋丸命中后会实际生成三枚分裂弹")
+	minato_arena.queue_free()
+	await process_frame
 	_check(registry.wave_for_time(0.0).title == "第一夜·尸行", "0 秒进入第一波")
 	_check(registry.wave_for_time(389.0).title == "第四夜·怨军", "Boss 前处于第四波")
+	var third_wave: WaveDefinition = registry.wave_for_time(180.0)
+	var fourth_wave: WaveDefinition = registry.wave_for_time(270.0)
+	_check(third_wave.spawn_interval <= 0.34 and third_wave.enemy_cap >= 115, "三分钟后刷怪速度与场上密度明显提高")
+	_check(fourth_wave.spawn_interval <= 0.25 and fourth_wave.enemy_cap >= 145, "第四波进一步提高刷怪速度与场上密度")
 	var orbit_definition: SkillDefinition = registry.skills[&"orbit_blades"]
+	_check(float(rasengan_level_two.get("aoe_radius", 0.0)) > 0.0, "二级螺旋丸命中后升级为范围群攻")
+	_check(float(rasengan_level_three.get("radius", 0.0)) > float(rasengan_level_two.get("radius", 0.0)) and float(rasengan_level_three.get("aoe_radius", 0.0)) > float(rasengan_level_two.get("aoe_radius", 0.0)), "三级螺旋丸本体和爆炸范围继续变大")
+	_check(int(rasengan_level_four.get("split_count", 0)) == 3 and int(rasengan_level_five.get("split_count", 0)) == 4, "四级与五级螺旋丸分别产生三重和四重分裂")
 	var orbit_growth_valid := true
 	var last_damage := 0.0
 	var last_count := 0
@@ -77,6 +164,9 @@ func _run() -> void:
 	await process_frame
 	arena.spawn_timer = 9999.0
 	_check(is_instance_valid(arena.player), "玩家成功创建")
+	arena.player.set_virtual_move_input(Vector2(0.75, -0.25))
+	_check(arena.player.virtual_move_input.is_equal_approx(Vector2(0.75, -0.25)), "玩家可接收虚拟摇杆的模拟移动输入")
+	arena.player.set_virtual_move_input(Vector2.ZERO)
 	_check(arena.player.scene_file_path == "res://scenes/actors/player.tscn", "玩家由独立预设实例化")
 	_check(arena.backdrop.scene_file_path == "res://scenes/world/abandoned_temple_map.tscn", "战斗地图由独立预设实例化")
 	_check(arena.player.get_collision_mask_value(2), "玩家启用世界障碍碰撞层")
@@ -122,6 +212,7 @@ func _run() -> void:
 	var enemy := arena.spawn_enemy(&"corpse", Vector2(70, 0), false)
 	var first_night_health := enemy.max_health if is_instance_valid(enemy) else 0.0
 	_check(is_instance_valid(enemy), "尸傀可按 EnemyDefinition 生成")
+	_check(first_night_health <= 24.0, "第一波尸傀生命值已下调，初始构筑可以快速击杀")
 	_check(is_instance_valid(enemy) and enemy.scene_file_path == "res://scenes/actors/enemies/corpse.tscn", "尸傀由对应独立预设实例化")
 	_check(is_instance_valid(enemy) and enemy.get_collision_layer_value(3) and enemy.get_collision_mask_value(2) and not enemy.get_collision_mask_value(3), "怪物穿过彼此但仍与树干碰撞")
 	if is_instance_valid(enemy):
@@ -129,6 +220,11 @@ func _run() -> void:
 	await create_timer(1.2).timeout
 	_check(arena.kills == 1, "敌人死亡动画完成后计数并生成经验")
 	_check(root.get_tree().get_nodes_in_group("xp_orbs").size() >= 1 or arena.current_xp > 0, "经验球成功生成并可被磁吸拾取")
+	arena.elapsed = 179.9
+	var health_multiplier_before_three_minutes: float = arena.enemy_health_multiplier()
+	arena.elapsed = 180.0
+	var health_multiplier_after_three_minutes: float = arena.enemy_health_multiplier()
+	_check(health_multiplier_after_three_minutes > health_multiplier_before_three_minutes * 1.25, "三分钟后怪物生命倍率进入高压台阶")
 	arena.elapsed = 300.0
 	var late_enemy := arena.spawn_enemy(&"corpse", Vector2(120, 0), false)
 	_check(is_instance_valid(late_enemy) and late_enemy.max_health > first_night_health * 2.0, "后续波次同类怪物生命值会明显上升")
@@ -161,8 +257,21 @@ func _run() -> void:
 	var main = main_scene.instantiate()
 	root.add_child(main)
 	await process_frame
-	main._start_game()
+	main._show_character_selection()
 	await process_frame
+	_check(main.character_select_open and main.ui_root.find_child("MinatoCharacterCard", true, false) != null, "点击开始后显示包含水门的角色选择界面")
+	main._select_character(&"minato")
+	await process_frame
+	_check(main.game_running and main.arena.player.character_id == &"minato", "角色选择结果会传入完整战斗场景")
+	_check(main.movement_joystick is MovementJoystick and main.touch_pause_button is Button, "战斗 HUD 包含移动端摇杆和触摸暂停按钮")
+	_check(not main.hp_bar.show_percentage and main.hp_value_label.text == "100", "角色血条显示当前生命数字 100 而非百分比")
+	var hud_shows_rasengan := false
+	for label_node in main.skill_box.find_children("*", "Label", true, false):
+		var skill_label: Label = label_node as Label
+		if skill_label != null and skill_label.text.contains("螺旋丸"):
+			hud_shows_rasengan = true
+			break
+	_check(hud_shows_rasengan, "进入战斗后 HUD 会立即显示所选角色的初始技能")
 	var time_before_pause: float = main.arena.elapsed
 	main.arena.collect_xp(12)
 	await process_frame
@@ -170,6 +279,8 @@ func _run() -> void:
 	var time_during_pause: float = main.arena.elapsed
 	_check(paused and main.leveling, "升级三选一会暂停场景树")
 	_check(is_equal_approx(time_before_pause, time_during_pause), "升级界面期间战斗计时与世界逻辑完全冻结")
+	var touchable_upgrade_cards: Array[Node] = main.modal_overlay.find_children("*", "Button", true, false)
+	_check(touchable_upgrade_cards.size() >= 3 and (touchable_upgrade_cards[0] as Button).mouse_filter == Control.MOUSE_FILTER_STOP, "升级选择框可通过触摸按钮选择")
 	main._choose_level_option(0)
 	await process_frame
 	_check(not paused and not main.leveling, "选择技能后恢复战斗")

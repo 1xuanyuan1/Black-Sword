@@ -4,8 +4,14 @@ extends CharacterBody2D
 signal health_changed(current: float, maximum: float)
 signal died
 
-const HERO_TEXTURE := preload("res://assets/actors/hero/hero_actual.png")
 const LEGACY_HERO_TEXTURE := preload("res://assets/actors/hero/samurai_blue.png")
+
+@export var character_id: StringName = &"black_sword"
+@export var character_display_name := "黑剑客"
+@export var initial_skill_id: StringName = &"black_slash"
+@export var character_texture: Texture2D
+@export var character_visual_kind: StringName = &"hero_actual"
+@export var character_visual_scale := 0.72
 
 @onready var visual: ActorVisual = $CharacterVisual
 @onready var body_collision: CollisionShape2D = $BodyCollision
@@ -21,6 +27,7 @@ var invulnerability := 0.0
 var dead := false
 var last_direction := Vector2.DOWN
 var knockback_velocity := Vector2.ZERO
+var virtual_move_input := Vector2.ZERO
 
 
 func setup(new_arena: Node) -> void:
@@ -29,7 +36,7 @@ func setup(new_arena: Node) -> void:
 	collision_layer = 1
 	collision_mask = 0
 	set_collision_mask_value(2, true)
-	visual.setup(HERO_TEXTURE, &"hero_actual", 0.72, Color.WHITE)
+	visual.setup(character_texture, character_visual_kind, character_visual_scale, Color.WHITE)
 	follow_camera.limit_left = int(arena.bounds.position.x)
 	follow_camera.limit_top = int(arena.bounds.position.y)
 	follow_camera.limit_right = int(arena.bounds.end.x)
@@ -44,7 +51,10 @@ func _physics_process(delta: float) -> void:
 	if dead or not is_instance_valid(arena) or not arena.run_active:
 		velocity = Vector2.ZERO
 		return
-	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var keyboard_input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var input := keyboard_input
+	if virtual_move_input.length_squared() > keyboard_input.length_squared():
+		input = virtual_move_input.limit_length(1.0)
 	if input.length_squared() > 0.01:
 		last_direction = input.normalized()
 	velocity = input * base_speed * speed_multiplier + knockback_velocity
@@ -53,6 +63,10 @@ func _physics_process(delta: float) -> void:
 	global_position.x = clampf(global_position.x, arena.bounds.position.x + 28.0, arena.bounds.end.x - 28.0)
 	global_position.y = clampf(global_position.y, arena.bounds.position.y + 28.0, arena.bounds.end.y - 28.0)
 	visual.set_motion(last_direction, input.length_squared() > 0.01)
+
+
+func set_virtual_move_input(value: Vector2) -> void:
+	virtual_move_input = value.limit_length(1.0)
 
 
 func take_damage(event: DamageEvent) -> void:

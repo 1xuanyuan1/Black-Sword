@@ -1,8 +1,7 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_map.tscn" id="2_map"]
-[ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="3_player"]
 [ext_resource type="Script" path="res://scripts/skill_system.gd" id="4_skills"]
 
 [node name="BattleArena" type="Node2D"]
@@ -18,7 +17,8 @@ editor_description = "地图、地形碰撞和氛围效果的容器。"
 editor_description = "玩家、普通敌人和 Boss 的运行时容器。"
 y_sort_enabled = true
 
-[node name="PlayerCharacter" parent="ActorLayer" instance=ExtResource("3_player")]
+[node name="PlayerSpawnPoint" type="Marker2D" parent="ActorLayer"]
+editor_description = "所选玩家角色预设的出生位置。"
 
 [node name="PickupLayer" type="Node2D" parent="."]
 editor_description = "经验球与其他可拾取物的运行时容器。"

@@ -33,6 +33,13 @@ func _build_skills() -> void:
 		{"damage": 44.0, "range": 124.0, "cooldown": 0.66, "arc": 2.25, "upgrade": "剑势大幅增强"},
 		{"damage": 54.0, "range": 132.0, "cooldown": 0.58, "arc": 2.4, "double": true, "upgrade": "化境：双重剑弧"},
 	])))
+	_add_skill(SkillDefinition.create(&"rasengan", "螺旋丸", "将高速旋转的查克拉凝聚成球，自动追击最近的敌人。", SkillDefinition.SkillType.ACTIVE, Color("65cfff"), _levels([
+		{"damage": 25.0, "speed": 290.0, "radius": 18.0, "count": 1, "pierce": 0, "cooldown": 1.45, "upgrade": "凝聚一枚单体螺旋丸"},
+		{"damage": 33.0, "speed": 310.0, "radius": 20.0, "count": 1, "pierce": 0, "aoe_radius": 78.0, "aoe_damage": 0.65, "cooldown": 1.32, "upgrade": "群攻：命中后爆发螺旋冲击"},
+		{"damage": 43.0, "speed": 335.0, "radius": 27.0, "count": 1, "pierce": 0, "aoe_radius": 105.0, "aoe_damage": 0.72, "cooldown": 1.20, "upgrade": "大螺旋丸：本体与爆炸范围变大"},
+		{"damage": 55.0, "speed": 360.0, "radius": 29.0, "count": 1, "pierce": 0, "aoe_radius": 116.0, "aoe_damage": 0.78, "split_count": 3, "split_damage": 0.55, "cooldown": 1.08, "upgrade": "命中后分裂三枚小螺旋丸"},
+		{"damage": 72.0, "speed": 390.0, "radius": 38.0, "count": 1, "pierce": 0, "aoe_radius": 150.0, "aoe_damage": 0.85, "split_count": 4, "split_damage": 0.65, "cooldown": 0.95, "upgrade": "化境：大玉螺旋丸，爆炸后四重分裂"},
+	])))
 	_add_skill(SkillDefinition.create(&"flying_sword", "飞剑诀", "御剑追敌，飞剑穿透后折返。", SkillDefinition.SkillType.ACTIVE, Color("7ddcff"), _levels([
 		{"damage": 16.0, "speed": 380.0, "count": 1, "pierce": 1, "bounces": 0, "cooldown": 2.0, "upgrade": "御使一柄飞剑"},
 		{"damage": 20.0, "speed": 410.0, "count": 2, "pierce": 1, "bounces": 1, "cooldown": 1.9, "upgrade": "飞剑 +1，碰到树干可反弹"},
@@ -113,8 +120,8 @@ func _build_waves() -> void:
 	waves = [
 		WaveDefinition.create({"title": "第一夜·尸行", "start": 0.0, "end": 90.0, "interval": 0.72, "weights": {&"corpse": 1.0}, "cap": 55, "elite": 0.0}),
 		WaveDefinition.create({"title": "第二夜·犬影", "start": 90.0, "end": 180.0, "interval": 0.56, "weights": {&"corpse": 0.62, &"hound": 0.38}, "cap": 75, "elite": 0.03}),
-		WaveDefinition.create({"title": "第三夜·鬼灯", "start": 180.0, "end": 270.0, "interval": 0.43, "weights": {&"corpse": 0.42, &"hound": 0.28, &"lantern": 0.3}, "cap": 95, "elite": 0.06}),
-		WaveDefinition.create({"title": "第四夜·怨军", "start": 270.0, "end": 390.0, "interval": 0.34, "weights": {&"corpse": 0.27, &"hound": 0.23, &"lantern": 0.24, &"revenant": 0.26}, "cap": 120, "elite": 0.1}),
+		WaveDefinition.create({"title": "第三夜·鬼灯", "start": 180.0, "end": 270.0, "interval": 0.34, "weights": {&"corpse": 0.42, &"hound": 0.28, &"lantern": 0.3}, "cap": 115, "elite": 0.08}),
+		WaveDefinition.create({"title": "第四夜·怨军", "start": 270.0, "end": 390.0, "interval": 0.25, "weights": {&"corpse": 0.27, &"hound": 0.23, &"lantern": 0.24, &"revenant": 0.26}, "cap": 145, "elite": 0.14}),
 	]
 
 
@@ -127,8 +134,8 @@ func wave_for_time(elapsed: float) -> WaveDefinition:
 
 func validate() -> PackedStringArray:
 	var errors := PackedStringArray()
-	if skills.size() != 10:
-		errors.append("技能数量应为 10，实际为 %d" % skills.size())
+	if skills.size() != 11:
+		errors.append("技能数量应为 11，实际为 %d" % skills.size())
 	for skill in skills.values():
 		if skill.max_level != 5:
 			errors.append("%s 的最大等级不是 5" % skill.display_name)
