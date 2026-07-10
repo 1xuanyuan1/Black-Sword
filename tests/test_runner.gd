@@ -162,10 +162,30 @@ func _run() -> void:
 	_check(orbit_growth_valid, "回风护体每级提升伤害、龙卷数量与旋转速度")
 	_check(int(registry.skills[&"flying_sword"].stats(2).get("bounces", 0)) == 1, "二级飞剑开始获得障碍反弹")
 	_check(int(registry.skills[&"sword_wave"].stats(5).get("bounces", 0)) == 2, "满级剑气可连续反弹两次")
-	var minato_attack_frames_valid := ActorVisual.OCAD_CAST.size() == 12
-	for minato_attack_frame: Rect2 in ActorVisual.OCAD_CAST:
-		minato_attack_frames_valid = minato_attack_frames_valid and minato_attack_frame.size == Vector2(21.0, 42.0)
-	_check(minato_attack_frames_valid, "水门攻击动画按单个 21×42 角色帧裁切，不会带出相邻角色")
+	var expected_minato_attack_frames: Array[Rect2] = [
+		Rect2(0, 168, 42, 42), Rect2(42, 168, 42, 42), Rect2(84, 168, 42, 42),
+		Rect2(126, 168, 42, 42), Rect2(168, 168, 42, 42), Rect2(210, 168, 42, 42),
+	]
+	_check(ActorVisual.OCAD_ATTACK_SIDE == expected_minato_attack_frames, "水门攻击使用六张完整 42×42 宽幅帧，并按 42 像素步进避免串入相邻动作")
+	var minato_player_preview: PlayerActor = (load("res://scenes/actors/player_minato.tscn") as PackedScene).instantiate() as PlayerActor
+	root.add_child(minato_player_preview)
+	await process_frame
+	var minato_visual: ActorVisual = minato_player_preview.visual
+	minato_visual.setup(minato_player_preview.character_texture, minato_player_preview.character_visual_kind, minato_player_preview.character_visual_scale)
+	minato_visual.play_attack(0.22)
+	var minato_attack_sequence_valid := true
+	for frame_index in range(expected_minato_attack_frames.size()):
+		minato_visual.animation_time = minato_visual.attack_animation_duration * (float(frame_index) + 0.1) / float(expected_minato_attack_frames.size())
+		minato_visual._update_frame()
+		minato_attack_sequence_valid = minato_attack_sequence_valid and minato_visual.sprite.region_rect == expected_minato_attack_frames[frame_index]
+	minato_visual.animation_time = minato_visual.attack_animation_duration * 2.0
+	minato_visual._update_frame()
+	minato_attack_sequence_valid = minato_attack_sequence_valid and minato_visual.sprite.region_rect == expected_minato_attack_frames[-1]
+	_check(minato_attack_sequence_valid, "水门攻击六帧按顺序只播放一次，超时保持收招帧而不会循环跳回")
+	minato_player_preview.play_attack(Vector2.RIGHT)
+	minato_visual._update_frame()
+	_check(minato_visual.facing.is_equal_approx(Vector2.RIGHT) and minato_visual.sprite.flip_h, "水门出招时立即朝向右侧目标，不会先显示反向帧再翻转")
+	minato_player_preview.queue_free()
 	var arena: Arena = battle_scene.instantiate() as Arena
 	root.add_child(arena)
 	await process_frame

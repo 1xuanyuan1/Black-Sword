@@ -132,8 +132,7 @@ func _cast_rasengan(stats: Dictionary) -> void:
 		cooldowns[&"rasengan"] = 0.25
 		return
 	var base_direction: Vector2 = player.global_position.direction_to(target.global_position)
-	player.last_direction = base_direction
-	player.play_attack()
+	player.play_attack(base_direction)
 	var count: int = stats.get("count", 1)
 	for i in range(count):
 		var offset: float = (float(i) - float(count - 1) * 0.5) * 0.20
@@ -164,8 +163,7 @@ func _cast_black_slash(stats: Dictionary) -> void:
 	var direction: Vector2 = player.last_direction
 	if is_instance_valid(target):
 		direction = player.global_position.direction_to(target.global_position)
-	player.last_direction = direction
-	player.play_attack()
+	player.play_attack(direction)
 	_perform_slash(direction, stats)
 	if stats.get("double", false):
 		_delayed_slash(direction.rotated(-0.18), stats)
@@ -231,7 +229,7 @@ func _spawn_wave(direction: Vector2, stats: Dictionary) -> void:
 		"lifetime": 2.0, "kind": &"wave", "knockback": 70.0,
 		"bounces": int(stats.get("bounces", 0)),
 	}))
-	player.play_attack()
+	player.play_attack(direction)
 	arena.play_sfx(&"slash")
 
 

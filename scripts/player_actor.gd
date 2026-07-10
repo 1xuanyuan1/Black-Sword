@@ -92,5 +92,8 @@ func heal(amount: float) -> void:
 	health_changed.emit(health, max_health)
 
 
-func play_attack() -> void:
+func play_attack(attack_direction: Vector2 = Vector2.ZERO) -> void:
+	if attack_direction.length_squared() > 0.01:
+		last_direction = attack_direction.normalized()
+		visual.set_motion(last_direction, false)
 	visual.play_attack()

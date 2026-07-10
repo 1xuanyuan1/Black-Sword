@@ -15,11 +15,9 @@ const OCAD_WALK_SIDE := [
 	Rect2(0, 84, 21, 42), Rect2(21, 84, 21, 42), Rect2(42, 84, 21, 42),
 	Rect2(63, 84, 21, 42), Rect2(84, 84, 21, 42), Rect2(105, 84, 21, 42),
 ]
-const OCAD_CAST := [
-	Rect2(0, 168, 21, 42), Rect2(21, 168, 21, 42), Rect2(42, 168, 21, 42),
-	Rect2(63, 168, 21, 42), Rect2(84, 168, 21, 42), Rect2(105, 168, 21, 42),
-	Rect2(126, 168, 21, 42), Rect2(147, 168, 21, 42), Rect2(168, 168, 21, 42),
-	Rect2(189, 168, 21, 42), Rect2(210, 168, 21, 42), Rect2(231, 168, 21, 42),
+const OCAD_ATTACK_SIDE := [
+	Rect2(0, 168, 42, 42), Rect2(42, 168, 42, 42), Rect2(84, 168, 42, 42),
+	Rect2(126, 168, 42, 42), Rect2(168, 168, 42, 42), Rect2(210, 168, 42, 42),
 ]
 const OCAD_IDLE_DOWN := Rect2(189, 126, 21, 42)
 const OCAD_IDLE_SIDE := Rect2(210, 126, 21, 42)
@@ -33,6 +31,7 @@ var facing := Vector2.DOWN
 var state: StringName = &"idle"
 var animation_time := 0.0
 var state_timer := 0.0
+var attack_animation_duration := 0.22
 var dead := false
 var base_scale := 3.5
 var attack_variant := 0
@@ -89,10 +88,14 @@ func play_attack(duration: float = 0.22) -> void:
 	state = &"attack"
 	animation_time = 0.0
 	attack_variant = 1 - attack_variant
-	state_timer = duration
+	attack_animation_duration = maxf(duration, 0.30) if visual_kind == &"ocad_character" else maxf(duration, 0.001)
+	state_timer = attack_animation_duration
+	if visual_kind == &"ocad_character":
+		sprite.scale = Vector2.ONE * base_scale
+		return
 	var tween := create_tween()
-	tween.tween_property(sprite, "scale", Vector2(base_scale * 1.12, base_scale * 0.92), duration * 0.45)
-	tween.tween_property(sprite, "scale", Vector2.ONE * base_scale, duration * 0.55)
+	tween.tween_property(sprite, "scale", Vector2(base_scale * 1.12, base_scale * 0.92), attack_animation_duration * 0.45)
+	tween.tween_property(sprite, "scale", Vector2.ONE * base_scale, attack_animation_duration * 0.55)
 
 
 func play_hurt() -> void:
@@ -170,9 +173,8 @@ func _update_ocad_frame() -> void:
 			var walk_region: Rect2 = frames[frame_index]
 			sprite.region_rect = walk_region
 		&"attack":
-			var cast_index: int = int(animation_time * 36.0) % OCAD_CAST.size()
-			var cast_region: Rect2 = OCAD_CAST[cast_index]
-			sprite.region_rect = cast_region
+			var attack_index: int = ocad_attack_frame_index()
+			sprite.region_rect = OCAD_ATTACK_SIDE[attack_index]
 			sprite.flip_h = facing.x > 0.0
 		&"hurt":
 			sprite.region_rect = OCAD_HURT
@@ -186,6 +188,11 @@ func _update_ocad_frame() -> void:
 				sprite.region_rect = OCAD_IDLE_UP
 			else:
 				sprite.region_rect = OCAD_IDLE_DOWN
+
+
+func ocad_attack_frame_index() -> int:
+	var normalized_time: float = animation_time / maxf(attack_animation_duration, 0.001)
+	return clampi(int(normalized_time * float(OCAD_ATTACK_SIDE.size())), 0, OCAD_ATTACK_SIDE.size() - 1)
 
 
 func _hero_direction_row(direction: Vector2) -> int:
