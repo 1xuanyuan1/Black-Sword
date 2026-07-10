@@ -14,13 +14,24 @@ signal sfx_requested(id: StringName)
 signal music_requested(id: StringName)
 
 const BOSS_SPAWN_TIME := 390.0
-const COURTYARD_INTERIOR := Rect2(-752.0, -496.0, 1504.0, 1048.0)
-const GATE_WAYPOINTS := [Vector2(-16.0, -620.0), Vector2(-16.0, 672.0)]
+const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
+const ENEMY_SCENES: Dictionary = {
+	&"corpse": preload("res://scenes/actors/enemies/corpse.tscn"),
+	&"hound": preload("res://scenes/actors/enemies/hound.tscn"),
+	&"lantern": preload("res://scenes/actors/enemies/lantern.tscn"),
+	&"revenant": preload("res://scenes/actors/enemies/revenant.tscn"),
+}
+
+@onready var backdrop: ArenaBackdrop = $Environment/AbandonedTempleMap
+@onready var actor_layer: Node2D = $ActorLayer
+@onready var player: PlayerActor = $ActorLayer/PlayerCharacter
+@onready var pickup_layer: Node2D = $PickupLayer
+@onready var projectile_layer: Node2D = $ProjectileLayer
+@onready var effect_layer: Node2D = $EffectLayer
+@onready var skill_system: SkillSystem = $GameplaySystems/SkillSystem
 
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
-var player: PlayerActor
-var skill_system: SkillSystem
 var enemies: Array = []
 var run_active := true
 var elapsed := 0.0
@@ -35,30 +46,15 @@ var boss_started := false
 var boss: BossActor
 var projectile_count := 0
 var rng := RandomNumberGenerator.new()
-var backdrop: ArenaBackdrop
 
 
 func _ready() -> void:
 	rng.randomize()
-	backdrop = ArenaBackdrop.new()
-	add_child(backdrop)
 	backdrop.setup(bounds)
-	player = PlayerActor.new()
-	add_child(player)
 	player.global_position = Vector2.ZERO
 	player.setup(self)
-	var camera := Camera2D.new()
-	camera.position_smoothing_enabled = true
-	camera.position_smoothing_speed = 7.0
-	camera.limit_left = int(bounds.position.x)
-	camera.limit_top = int(bounds.position.y)
-	camera.limit_right = int(bounds.end.x)
-	camera.limit_bottom = int(bounds.end.y)
-	player.add_child(camera)
 	player.health_changed.connect(func(current: float, maximum: float) -> void: player_health_changed.emit(current, maximum))
 	player.died.connect(_on_player_death)
-	skill_system = SkillSystem.new()
-	add_child(skill_system)
 	skill_system.setup(self, player, registry.skills)
 	skill_system.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
 	xp_changed.emit(current_xp, required_xp, player_level)
@@ -95,10 +91,11 @@ func _physics_process(delta: float) -> void:
 
 
 func spawn_enemy(id: StringName, at_position: Vector2, is_elite: bool = false) -> EnemyActor:
-	if not registry.enemies.has(id) or active_enemy_count() >= 150:
+	if not registry.enemies.has(id) or not ENEMY_SCENES.has(id) or active_enemy_count() >= 150:
 		return null
-	var enemy := EnemyActor.new()
-	add_child(enemy)
+	var enemy_scene: PackedScene = ENEMY_SCENES[id] as PackedScene
+	var enemy: EnemyActor = enemy_scene.instantiate() as EnemyActor
+	actor_layer.add_child(enemy)
 	enemy.global_position = at_position
 	enemy.setup(self, registry.enemies[id], is_elite, enemy_health_multiplier())
 	enemy.defeated.connect(_on_enemy_defeated)
@@ -149,24 +146,6 @@ func _spawn_position_around_player() -> Vector2:
 	return fallback
 
 
-func navigation_direction(from_position: Vector2, target_position: Vector2) -> Vector2:
-	var from_inside := COURTYARD_INTERIOR.has_point(from_position)
-	var target_inside := COURTYARD_INTERIOR.has_point(target_position)
-	if from_inside == target_inside:
-		return from_position.direction_to(target_position)
-	var best_gate: Vector2 = GATE_WAYPOINTS[0]
-	var best_distance := INF
-	for gate_value in GATE_WAYPOINTS:
-		var gate: Vector2 = gate_value
-		var route_distance: float = from_position.distance_to(gate) + gate.distance_to(target_position)
-		if route_distance < best_distance:
-			best_distance = route_distance
-			best_gate = gate
-	if from_position.distance_to(best_gate) > 82.0:
-		return from_position.direction_to(best_gate)
-	return from_position.direction_to(target_position)
-
-
 func _start_boss() -> void:
 	if boss_started or not run_active:
 		return
@@ -181,8 +160,8 @@ func _start_boss() -> void:
 	if absorbed_xp > 0:
 		collect_xp(absorbed_xp)
 	announce("鬼门震动——鬼面剑豪现身", Color("ff6b6b"))
-	boss = BossActor.new()
-	add_child(boss)
+	boss = BOSS_SCENE.instantiate() as BossActor
+	actor_layer.add_child(boss)
 	boss.global_position = Vector2(0, -390)
 	boss.setup(self)
 	boss.health_changed.connect(func(current: float, maximum: float) -> void: boss_health_changed.emit(current, maximum))
@@ -198,7 +177,7 @@ func _on_enemy_defeated(enemy: EnemyActor, xp_value: int, death_position: Vector
 	if get_tree().get_nodes_in_group("xp_orbs").size() < 220:
 		var orb := ExperienceOrb.create(self, death_position, xp_value)
 		orb.add_to_group("xp_orbs")
-		add_child(orb)
+		pickup_layer.add_child(orb)
 	else:
 		collect_xp(xp_value)
 
@@ -301,14 +280,14 @@ func active_enemy_count() -> int:
 
 
 func add_effect(effect: EffectNode) -> void:
-	add_child(effect)
+	effect_layer.add_child(effect)
 
 
 func add_projectile(projectile: CombatProjectile) -> void:
 	if get_tree().get_nodes_in_group("projectiles").size() >= 200:
 		return
 	projectile.add_to_group("projectiles")
-	add_child(projectile)
+	projectile_layer.add_child(projectile)
 
 
 func spawn_enemy_projectile(position: Vector2, direction: Vector2, damage: float, owner_node: Node, speed: float = 250.0) -> void:

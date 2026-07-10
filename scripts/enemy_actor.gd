@@ -3,9 +3,13 @@ extends CharacterBody2D
 
 signal defeated(enemy: EnemyActor, xp_value: int, death_position: Vector2)
 
+@export var enemy_id: StringName = &"corpse"
+
+@onready var visual: ActorVisual = $CharacterVisual
+@onready var body_collision: CollisionShape2D = $BodyCollision
+
 var arena: Node
 var definition: EnemyDefinition
-var visual := ActorVisual.new()
 var health := 20.0
 var max_health := 20.0
 var dead := false
@@ -20,28 +24,28 @@ var slow_timer := 0.0
 var charge_timer := 2.8
 var charge_velocity := Vector2.ZERO
 var charge_time := 0.0
+var approach_offset := Vector2.ZERO
 
 
 func setup(new_arena: Node, new_definition: EnemyDefinition, is_elite: bool = false, health_multiplier: float = 1.0) -> void:
 	arena = new_arena
 	definition = new_definition
 	elite = is_elite
-	collision_layer = 1
-	collision_mask = 1
+	collision_layer = 0
+	set_collision_layer_value(3, true)
+	collision_mask = 0
 	set_collision_mask_value(2, true)
+	var offset_angle := TAU * float(abs(get_instance_id()) % 24) / 24.0
+	approach_offset = Vector2.from_angle(offset_angle) * (22.0 + float(abs(get_instance_id()) % 4) * 7.0)
 	max_health = definition.max_health * health_multiplier * (2.15 if elite else 1.0)
 	health = max_health
 	hit_radius = 24.0 if definition.id == &"revenant" else 17.0
 	visual.setup(definition.texture, definition.visual_kind, definition.scale_factor * (1.18 if elite else 1.0), definition.tint)
 	if elite:
 		visual.sprite.modulate = Color("ffd877")
-	add_child(visual)
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = hit_radius * 0.72
-	collision.shape = shape
-	collision.position.y = 5.0
-	add_child(collision)
+	var body_shape: CircleShape2D = body_collision.shape as CircleShape2D
+	if body_shape != null:
+		body_shape.radius = hit_radius * 0.72
 	add_to_group("enemies")
 	visual.death_animation_finished.connect(_finish_death)
 
@@ -71,7 +75,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_behavior(delta: float) -> void:
-	var to_player: Vector2 = arena.navigation_direction(global_position, arena.player.global_position)
+	var navigation_target: Vector2 = arena.player.global_position + approach_offset
+	var to_player: Vector2 = global_position.direction_to(navigation_target)
 	var distance := global_position.distance_to(arena.player.global_position)
 	match definition.behavior:
 		&"ranged":
@@ -136,8 +141,8 @@ func take_damage(event: DamageEvent) -> void:
 	if health <= 0.0:
 		dead = true
 		velocity = Vector2.ZERO
-		set_collision_layer_value(1, false)
-		set_collision_mask_value(1, false)
+		collision_layer = 0
+		collision_mask = 0
 		visual.play_death()
 
 

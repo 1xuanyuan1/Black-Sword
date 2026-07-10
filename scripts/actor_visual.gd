@@ -3,7 +3,7 @@ extends Node2D
 
 signal death_animation_finished
 
-var sprite := Sprite2D.new()
+@onready var sprite: Sprite2D = $CharacterSprite
 var visual_kind: StringName = &"character"
 var facing := Vector2.DOWN
 var state: StringName = &"idle"
@@ -31,7 +31,6 @@ func setup(texture: Texture2D, kind: StringName, scale_factor: float, tint: Colo
 		sprite.hframes = 4
 		sprite.vframes = 4
 	sprite.scale = Vector2.ONE * base_scale
-	add_child(sprite)
 	z_index = 5
 
 

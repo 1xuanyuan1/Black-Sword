@@ -4,6 +4,7 @@ const UI_FONT := preload("res://assets/fonts/NotoSansSC.ttf")
 const HERO_PORTRAIT := preload("res://assets/actors/hero/portrait_actual.png")
 const BATTLE_MUSIC := preload("res://assets/audio/battle.ogg")
 const BOSS_MUSIC := preload("res://assets/audio/boss.ogg")
+const BATTLE_ARENA_SCENE: PackedScene = preload("res://scenes/gameplay/battle_arena.tscn")
 const SFX_STREAMS := {
 	&"slash": preload("res://assets/audio/slash.wav"),
 	&"hit": preload("res://assets/audio/hit.wav"),
@@ -44,8 +45,12 @@ var game_running := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	world_holder.name = "BattleWorld"
 	world_holder.process_mode = Node.PROCESS_MODE_PAUSABLE
+	ui_layer.name = "UserInterfaceLayer"
 	ui_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	ui_root.name = "ScreenInterface"
+	music_player.name = "MusicPlayer"
 	_build_theme()
 	add_child(world_holder)
 	add_child(ui_layer)
@@ -58,15 +63,13 @@ func _ready() -> void:
 	music_player.finished.connect(func() -> void: if music_player.stream != null: music_player.play())
 	for i in range(10):
 		var player := AudioStreamPlayer.new()
+		player.name = "SfxVoice%02d" % (i + 1)
 		player.bus = &"SFX"
 		add_child(player)
 		sfx_players.append(player)
 	_show_title()
 	if "--qa-battle" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
-	elif "--qa-collision" in OS.get_cmdline_user_args():
-		call_deferred("_start_game")
-		call_deferred("_qa_collision_demo")
 	elif "--qa-orbit" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_enable_orbit")
@@ -76,6 +79,13 @@ func _ready() -> void:
 	elif "--qa-levelup" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_trigger_levelup")
+
+
+func _exit_tree() -> void:
+	music_player.stop()
+	for player in sfx_players:
+		if is_instance_valid(player):
+			player.stop()
 
 
 func _qa_trigger_levelup() -> void:
@@ -99,23 +109,6 @@ func _qa_enable_orbit() -> void:
 	if is_instance_valid(arena):
 		for _level in range(5):
 			arena.skill_system.upgrade(&"orbit_blades")
-
-
-func _qa_collision_demo() -> void:
-	await get_tree().process_frame
-	await get_tree().create_timer(0.35).timeout
-	if not is_instance_valid(arena):
-		return
-	arena.player.global_position = Vector2(690.0, 0.0)
-	Input.action_press("move_right")
-	var projectile := CombatProjectile.create({
-		"arena": arena, "owner": arena.player, "position": Vector2(690.0, -90.0),
-		"direction": Vector2(1.0, 0.2), "speed": 430.0, "damage": 12.0,
-		"radius": 12.0, "lifetime": 3.2, "pierce": 3, "kind": &"sword", "bounces": 3,
-	})
-	arena.add_projectile(projectile)
-	await get_tree().create_timer(1.2).timeout
-	Input.action_release("move_right")
 
 
 func _input(event: InputEvent) -> void:
@@ -269,7 +262,7 @@ func _start_game() -> void:
 	_clear_world()
 	_clear_ui()
 	game_running = true
-	arena = Arena.new()
+	arena = BATTLE_ARENA_SCENE.instantiate() as Arena
 	world_holder.add_child(arena)
 	_connect_arena()
 	_build_hud()
@@ -651,6 +644,8 @@ func _spacer(height: float) -> Control:
 
 
 func _play_music(id: StringName, volume_db: float = -5.0) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
 	var stream: AudioStream = BOSS_MUSIC if id == &"boss" else BATTLE_MUSIC
 	if music_player.stream == stream and music_player.playing:
 		return
@@ -661,7 +656,7 @@ func _play_music(id: StringName, volume_db: float = -5.0) -> void:
 
 
 func _play_sfx(id: StringName) -> void:
-	if not SFX_STREAMS.has(id) or sfx_players.is_empty():
+	if DisplayServer.get_name() == "headless" or not SFX_STREAMS.has(id) or sfx_players.is_empty():
 		return
 	var player := sfx_players[sfx_index % sfx_players.size()]
 	sfx_index += 1

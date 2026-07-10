@@ -1,0 +1,37 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena.gd" id="1_arena"]
+[ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_map.tscn" id="2_map"]
+[ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="3_player"]
+[ext_resource type="Script" path="res://scripts/skill_system.gd" id="4_skills"]
+
+[node name="BattleArena" type="Node2D"]
+editor_description = "完整战斗场景：组装地图、玩家、玩法系统及所有运行时对象层。"
+script = ExtResource("1_arena")
+
+[node name="Environment" type="Node2D" parent="."]
+editor_description = "地图、地形碰撞和氛围效果的容器。"
+
+[node name="AbandonedTempleMap" parent="Environment" instance=ExtResource("2_map")]
+
+[node name="ActorLayer" type="Node2D" parent="."]
+editor_description = "玩家、普通敌人和 Boss 的运行时容器。"
+y_sort_enabled = true
+
+[node name="PlayerCharacter" parent="ActorLayer" instance=ExtResource("3_player")]
+
+[node name="PickupLayer" type="Node2D" parent="."]
+editor_description = "经验球与其他可拾取物的运行时容器。"
+
+[node name="ProjectileLayer" type="Node2D" parent="."]
+editor_description = "玩家和敌方弹丸的运行时容器。"
+
+[node name="EffectLayer" type="Node2D" parent="."]
+editor_description = "伤害数字、攻击范围和技能特效的运行时容器。"
+
+[node name="GameplaySystems" type="Node" parent="."]
+editor_description = "不直接显示的战斗规则和系统容器。"
+
+[node name="SkillSystem" type="Node" parent="GameplaySystems"]
+editor_description = "自动施放、技能升级和冷却管理。"
+script = ExtResource("4_skills")

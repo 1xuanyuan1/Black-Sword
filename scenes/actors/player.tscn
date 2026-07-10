@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/player_actor.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/actor_visual.gd" id="2_visual"]
+[ext_resource type="Texture2D" path="res://assets/actors/hero/hero_actual.png" id="3_hero"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player_body"]
+radius = 14.0
+
+[node name="PlayerCharacter" type="CharacterBody2D" groups=["player"]]
+editor_description = "玩家角色实体：负责移动、生命、受击和死亡。"
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_player")
+
+[node name="CharacterVisual" type="Node2D" parent="."]
+editor_description = "玩家外观与动作表现。"
+z_index = 5
+script = ExtResource("2_visual")
+
+[node name="CharacterSprite" type="Sprite2D" parent="CharacterVisual"]
+texture_filter = 1
+texture = ExtResource("3_hero")
+hframes = 6
+vframes = 9
+frame = 0
+scale = Vector2(0.72, 0.72)
+
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+editor_description = "角色脚下的实体碰撞范围。"
+position = Vector2(0, 8)
+shape = SubResource("CircleShape2D_player_body")
+
+[node name="FollowCamera" type="Camera2D" parent="."]
+editor_description = "平滑跟随玩家的战斗摄像机。"
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0
+

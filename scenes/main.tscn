@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bwq5dwm8huu6k"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://b1ux36kdkbit3" path="res://scripts/main.gd" id="1_main"]
 
-[node name="BlackSword" type="Node"]
+[node name="GameApplication" type="Node" unique_id=1449963614]
+editor_description = "游戏入口：管理标题、战斗流程、HUD、暂停、升级和结算界面。"
 script = ExtResource("1_main")

@@ -35,7 +35,7 @@ func _build_skills() -> void:
 	])))
 	_add_skill(SkillDefinition.create(&"flying_sword", "飞剑诀", "御剑追敌，飞剑穿透后折返。", SkillDefinition.SkillType.ACTIVE, Color("7ddcff"), _levels([
 		{"damage": 16.0, "speed": 380.0, "count": 1, "pierce": 1, "bounces": 0, "cooldown": 2.0, "upgrade": "御使一柄飞剑"},
-		{"damage": 20.0, "speed": 410.0, "count": 2, "pierce": 1, "bounces": 1, "cooldown": 1.9, "upgrade": "飞剑 +1，可反弹一次"},
+		{"damage": 20.0, "speed": 410.0, "count": 2, "pierce": 1, "bounces": 1, "cooldown": 1.9, "upgrade": "飞剑 +1，碰到树干可反弹"},
 		{"damage": 26.0, "speed": 440.0, "count": 2, "pierce": 2, "bounces": 1, "cooldown": 1.72, "upgrade": "飞剑穿透 +1"},
 		{"damage": 33.0, "speed": 470.0, "count": 3, "pierce": 2, "bounces": 2, "cooldown": 1.55, "upgrade": "飞剑 +1，反弹 +1"},
 		{"damage": 42.0, "speed": 500.0, "count": 3, "pierce": 3, "bounces": 3, "cooldown": 1.38, "returning": true, "upgrade": "化境：三次反弹后折返"},

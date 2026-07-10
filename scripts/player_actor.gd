@@ -7,8 +7,11 @@ signal died
 const HERO_TEXTURE := preload("res://assets/actors/hero/hero_actual.png")
 const LEGACY_HERO_TEXTURE := preload("res://assets/actors/hero/samurai_blue.png")
 
+@onready var visual: ActorVisual = $CharacterVisual
+@onready var body_collision: CollisionShape2D = $BodyCollision
+@onready var follow_camera: Camera2D = $FollowCamera
+
 var arena: Node
-var visual := ActorVisual.new()
 var max_health := 100.0
 var health := 100.0
 var base_speed := 210.0
@@ -24,16 +27,13 @@ func setup(new_arena: Node) -> void:
 	arena = new_arena
 	add_to_group("player")
 	collision_layer = 1
-	collision_mask = 1
+	collision_mask = 0
 	set_collision_mask_value(2, true)
 	visual.setup(HERO_TEXTURE, &"hero_actual", 0.72, Color.WHITE)
-	add_child(visual)
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = 14.0
-	collision.shape = shape
-	collision.position.y = 8.0
-	add_child(collision)
+	follow_camera.limit_left = int(arena.bounds.position.x)
+	follow_camera.limit_top = int(arena.bounds.position.y)
+	follow_camera.limit_right = int(arena.bounds.end.x)
+	follow_camera.limit_bottom = int(arena.bounds.end.y)
 	visual.death_animation_finished.connect(func() -> void: died.emit())
 	health_changed.emit(health, max_health)
 

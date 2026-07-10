@@ -12,8 +12,11 @@ const ATTACK_RIGHT_TEXTURE := preload("res://assets/actors/boss/AttackRight.png"
 const CHARGE_LEFT_TEXTURE := preload("res://assets/actors/boss/ChargeLeft.png")
 const CHARGE_RIGHT_TEXTURE := preload("res://assets/actors/boss/ChargeRight.png")
 
+@onready var character_visual: Node2D = $CharacterVisual
+@onready var sprite: Sprite2D = $CharacterVisual/CharacterSprite
+@onready var body_collision: CollisionShape2D = $BodyCollision
+
 var arena: Node
-var sprite := Sprite2D.new()
 var max_health := 2800.0
 var health := 2800.0
 var dead := false
@@ -40,20 +43,11 @@ func setup(new_arena: Node) -> void:
 	arena = new_arena
 	add_to_group("enemies")
 	add_to_group("boss")
-	collision_layer = 1
-	collision_mask = 1
+	collision_layer = 0
+	set_collision_layer_value(3, true)
+	collision_mask = 0
 	set_collision_mask_value(2, true)
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	sprite.scale = Vector2.ONE * 2.8
-	sprite.position.y = -10.0
-	add_child(sprite)
 	_set_animation(&"idle")
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = 36.0
-	collision.shape = shape
-	collision.position.y = 12.0
-	add_child(collision)
 	z_index = 8
 	health_changed.emit(health, max_health)
 
@@ -91,7 +85,7 @@ func _physics_process(delta: float) -> void:
 		if windup <= 0.0:
 			_resolve_pending_attack()
 	else:
-		var direction: Vector2 = arena.navigation_direction(global_position, arena.player.global_position)
+		var direction: Vector2 = global_position.direction_to(arena.player.global_position)
 		var distance := global_position.distance_to(arena.player.global_position)
 		if distance > 105.0:
 			velocity = direction * speed * (1.0 + 0.09 * phase) + knockback_velocity
@@ -208,8 +202,8 @@ func apply_slow(_multiplier: float, _duration: float, _freeze: bool = false) -> 
 func _die() -> void:
 	dead = true
 	velocity = Vector2.ZERO
-	set_collision_layer_value(1, false)
-	set_collision_mask_value(1, false)
+	collision_layer = 0
+	collision_mask = 0
 	_set_animation(&"hit")
 	var tween := create_tween()
 	for i in range(4):
