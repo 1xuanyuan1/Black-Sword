@@ -18,6 +18,9 @@ var returned := false
 var knockback := 30.0
 var hit_ids: Dictionary = {}
 var turn_speed := 5.0
+var bounces_remaining := 0
+var bounce_count := 0
+var homing_lockout := 0.0
 
 
 static func create(options: Dictionary) -> CombatProjectile:
@@ -36,15 +39,17 @@ static func create(options: Dictionary) -> CombatProjectile:
 	projectile.homing = options.get("homing", false)
 	projectile.returning = options.get("returning", false)
 	projectile.knockback = options.get("knockback", 30.0)
+	projectile.bounces_remaining = options.get("bounces", 0)
 	projectile.z_index = 12
 	return projectile
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if not is_instance_valid(arena) or not arena.run_active:
 		return
 	elapsed += delta
-	if homing and not hostile:
+	homing_lockout = maxf(homing_lockout - delta, 0.0)
+	if homing and not hostile and homing_lockout <= 0.0:
 		var target: Variant = arena.nearest_enemy(global_position)
 		if is_instance_valid(target):
 			var desired: Vector2 = global_position.direction_to(target.global_position)
@@ -53,7 +58,8 @@ func _process(delta: float) -> void:
 		returned = true
 		direction *= -1.0
 		hit_ids.clear()
-	global_position += direction * speed * delta
+	if _move_with_world_collision(direction * speed * delta):
+		return
 	rotation = direction.angle() + PI * 0.5
 	queue_redraw()
 	if hostile:
@@ -62,6 +68,33 @@ func _process(delta: float) -> void:
 		_check_enemy_hits()
 	if elapsed >= lifetime or not arena.bounds.grow(180.0).has_point(global_position):
 		queue_free()
+
+
+func _move_with_world_collision(motion: Vector2) -> bool:
+	var destination := global_position + motion
+	if not is_inside_tree() or get_world_2d() == null:
+		global_position = destination
+		return false
+	var query := PhysicsRayQueryParameters2D.create(global_position, destination, 2)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	var hit: Dictionary = get_world_2d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		global_position = destination
+		return false
+	var hit_position: Vector2 = hit.get("position", global_position)
+	var hit_normal: Vector2 = hit.get("normal", -direction)
+	if bounces_remaining > 0 and not hostile:
+		bounces_remaining -= 1
+		bounce_count += 1
+		direction = direction.bounce(hit_normal).normalized()
+		global_position = hit_position + hit_normal * maxf(3.0, radius * 0.22)
+		homing_lockout = 0.22
+		arena.add_effect(EffectNode.create(&"pulse", hit_position, {"radius": 22.0, "duration": 0.18, "color": Color("9eeeff")}))
+		return false
+	arena.add_effect(EffectNode.create(&"pulse", hit_position, {"radius": 14.0, "duration": 0.13, "color": Color("c6e9ff") if not hostile else Color("ff7777")}))
+	queue_free()
+	return true
 
 
 func _check_enemy_hits() -> void:

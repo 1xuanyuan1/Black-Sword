@@ -34,25 +34,25 @@ func _build_skills() -> void:
 		{"damage": 54.0, "range": 132.0, "cooldown": 0.58, "arc": 2.4, "double": true, "upgrade": "化境：双重剑弧"},
 	])))
 	_add_skill(SkillDefinition.create(&"flying_sword", "飞剑诀", "御剑追敌，飞剑穿透后折返。", SkillDefinition.SkillType.ACTIVE, Color("7ddcff"), _levels([
-		{"damage": 16.0, "speed": 380.0, "count": 1, "pierce": 1, "cooldown": 2.0, "upgrade": "御使一柄飞剑"},
-		{"damage": 20.0, "speed": 410.0, "count": 2, "pierce": 1, "cooldown": 1.9, "upgrade": "飞剑数量 +1"},
-		{"damage": 26.0, "speed": 440.0, "count": 2, "pierce": 2, "cooldown": 1.72, "upgrade": "飞剑穿透 +1"},
-		{"damage": 33.0, "speed": 470.0, "count": 3, "pierce": 2, "cooldown": 1.55, "upgrade": "飞剑数量 +1"},
-		{"damage": 42.0, "speed": 500.0, "count": 3, "pierce": 3, "cooldown": 1.38, "returning": true, "upgrade": "化境：飞剑折返"},
+		{"damage": 16.0, "speed": 380.0, "count": 1, "pierce": 1, "bounces": 0, "cooldown": 2.0, "upgrade": "御使一柄飞剑"},
+		{"damage": 20.0, "speed": 410.0, "count": 2, "pierce": 1, "bounces": 1, "cooldown": 1.9, "upgrade": "飞剑 +1，可反弹一次"},
+		{"damage": 26.0, "speed": 440.0, "count": 2, "pierce": 2, "bounces": 1, "cooldown": 1.72, "upgrade": "飞剑穿透 +1"},
+		{"damage": 33.0, "speed": 470.0, "count": 3, "pierce": 2, "bounces": 2, "cooldown": 1.55, "upgrade": "飞剑 +1，反弹 +1"},
+		{"damage": 42.0, "speed": 500.0, "count": 3, "pierce": 3, "bounces": 3, "cooldown": 1.38, "returning": true, "upgrade": "化境：三次反弹后折返"},
 	])))
 	_add_skill(SkillDefinition.create(&"sword_wave", "剑气纵横", "向敌群打出贯穿剑气。", SkillDefinition.SkillType.ACTIVE, Color("b8f7ff"), _levels([
-		{"damage": 22.0, "speed": 430.0, "width": 22.0, "pierce": 4, "cooldown": 2.4, "upgrade": "贯穿四名敌人"},
-		{"damage": 29.0, "speed": 450.0, "width": 26.0, "pierce": 5, "cooldown": 2.25, "upgrade": "剑气更宽"},
-		{"damage": 37.0, "speed": 470.0, "width": 30.0, "pierce": 7, "cooldown": 2.05, "upgrade": "贯穿数量提升"},
-		{"damage": 48.0, "speed": 500.0, "width": 34.0, "pierce": 9, "cooldown": 1.85, "upgrade": "剑气威力大增"},
-		{"damage": 62.0, "speed": 530.0, "width": 38.0, "pierce": 12, "cooldown": 1.65, "cross": true, "upgrade": "化境：交叉剑气"},
+		{"damage": 22.0, "speed": 430.0, "width": 22.0, "pierce": 4, "bounces": 0, "cooldown": 2.4, "upgrade": "贯穿四名敌人"},
+		{"damage": 29.0, "speed": 450.0, "width": 26.0, "pierce": 5, "bounces": 0, "cooldown": 2.25, "upgrade": "剑气更宽"},
+		{"damage": 37.0, "speed": 470.0, "width": 30.0, "pierce": 7, "bounces": 1, "cooldown": 2.05, "upgrade": "剑气可反弹一次"},
+		{"damage": 48.0, "speed": 500.0, "width": 34.0, "pierce": 9, "bounces": 1, "cooldown": 1.85, "upgrade": "剑气威力大增"},
+		{"damage": 62.0, "speed": 530.0, "width": 38.0, "pierce": 12, "bounces": 2, "cooldown": 1.65, "cross": true, "upgrade": "化境：交叉剑气，反弹两次"},
 	])))
-	_add_skill(SkillDefinition.create(&"orbit_blades", "回风护体", "剑刃环身，持续切割近敌。", SkillDefinition.SkillType.ACTIVE, Color("e8e2ff"), _levels([
-		{"damage": 7.0, "count": 2, "radius": 72.0, "cooldown": 0.45, "upgrade": "两柄护体剑"},
-		{"damage": 9.0, "count": 3, "radius": 78.0, "cooldown": 0.42, "upgrade": "护体剑 +1"},
-		{"damage": 12.0, "count": 4, "radius": 84.0, "cooldown": 0.38, "upgrade": "护体剑 +1"},
-		{"damage": 16.0, "count": 5, "radius": 90.0, "cooldown": 0.34, "upgrade": "剑环威力提升"},
-		{"damage": 21.0, "count": 6, "radius": 96.0, "cooldown": 0.3, "inner": true, "upgrade": "化境：反向内环"},
+	_add_skill(SkillDefinition.create(&"orbit_blades", "回风护体", "剑风化作龙卷，绕身持续绞杀近敌。", SkillDefinition.SkillType.ACTIVE, Color("7ee4df"), _levels([
+		{"damage": 8.0, "count": 1, "radius": 78.0, "rotation_speed": 1.8, "cooldown": 0.55, "upgrade": "唤出一道护体龙卷"},
+		{"damage": 11.0, "count": 2, "radius": 82.0, "rotation_speed": 2.2, "cooldown": 0.50, "upgrade": "龙卷数量 +1，旋转加快"},
+		{"damage": 15.0, "count": 3, "radius": 88.0, "rotation_speed": 2.6, "cooldown": 0.45, "upgrade": "龙卷数量 +1，伤害提升"},
+		{"damage": 20.0, "count": 4, "radius": 94.0, "rotation_speed": 3.0, "cooldown": 0.40, "upgrade": "龙卷数量 +1，旋转加快"},
+		{"damage": 27.0, "count": 4, "inner_count": 2, "radius": 100.0, "rotation_speed": 3.45, "cooldown": 0.34, "upgrade": "化境：六龙卷内外双环"},
 	])))
 	_add_skill(SkillDefinition.create(&"thunder", "落雷符", "雷霆在敌群间连续跳跃。", SkillDefinition.SkillType.ACTIVE, Color("ffe66d"), _levels([
 		{"damage": 24.0, "chains": 3, "cooldown": 3.2, "upgrade": "雷击三名敌人"},

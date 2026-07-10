@@ -40,6 +40,9 @@ func setup(new_arena: Node) -> void:
 	arena = new_arena
 	add_to_group("enemies")
 	add_to_group("boss")
+	collision_layer = 1
+	collision_mask = 1
+	set_collision_mask_value(2, true)
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.scale = Vector2.ONE * 2.8
 	sprite.position.y = -10.0
@@ -88,7 +91,7 @@ func _physics_process(delta: float) -> void:
 		if windup <= 0.0:
 			_resolve_pending_attack()
 	else:
-		var direction := global_position.direction_to(arena.player.global_position)
+		var direction: Vector2 = arena.navigation_direction(global_position, arena.player.global_position)
 		var distance := global_position.distance_to(arena.player.global_position)
 		if distance > 105.0:
 			velocity = direction * speed * (1.0 + 0.09 * phase) + knockback_velocity

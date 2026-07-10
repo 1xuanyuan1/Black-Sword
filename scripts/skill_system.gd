@@ -3,6 +3,8 @@ extends Node
 
 signal skills_changed(levels: Dictionary, active_ids: Array[StringName], passive_ids: Array[StringName])
 
+const DRAGON_TORNADO_TEXTURE := preload("res://assets/vfx/dragon_tornado.png")
+
 var arena: Node
 var player: PlayerActor
 var definitions: Dictionary
@@ -11,6 +13,8 @@ var active_ids: Array[StringName] = []
 var passive_ids: Array[StringName] = []
 var cooldowns: Dictionary = {}
 var orbit_angle := 0.0
+var orbit_animation_time := 0.0
+var orbit_visuals: Array[Sprite2D] = []
 var rng := RandomNumberGenerator.new()
 
 
@@ -24,8 +28,17 @@ func setup(new_arena: Node, new_player: PlayerActor, skill_definitions: Dictiona
 
 func process_skills(delta: float) -> void:
 	if not arena.run_active or player.dead:
+		_clear_orbit_visuals()
 		return
-	orbit_angle += delta * 2.6
+	var orbit_level: int = levels.get(&"orbit_blades", 0)
+	if orbit_level > 0:
+		var orbit_stats: Dictionary = definitions[&"orbit_blades"].stats(orbit_level)
+		var rotation_speed: float = orbit_stats.get("rotation_speed", 2.0)
+		orbit_angle = fposmod(orbit_angle + delta * rotation_speed, TAU)
+		orbit_animation_time += delta * (10.0 + rotation_speed * 2.2)
+		_update_orbit_visuals(orbit_stats)
+	else:
+		_clear_orbit_visuals()
 	for id in active_ids:
 		cooldowns[id] = float(cooldowns.get(id, 0.0)) - delta
 		if cooldowns[id] <= 0.0:
@@ -159,6 +172,7 @@ func _cast_flying_sword(stats: Dictionary) -> void:
 			"damage": float(stats.get("damage", 15.0)) * damage_multiplier(), "radius": 13.0,
 			"pierce": int(stats.get("pierce", 1)), "lifetime": 2.1, "kind": &"sword",
 			"homing": true, "returning": stats.get("returning", false), "knockback": 42.0,
+			"bounces": int(stats.get("bounces", 0)),
 		}))
 	arena.play_sfx(&"magic")
 
@@ -181,26 +195,62 @@ func _spawn_wave(direction: Vector2, stats: Dictionary) -> void:
 		"damage": float(stats.get("damage", 22.0)) * damage_multiplier(),
 		"radius": float(stats.get("width", 24.0)), "pierce": int(stats.get("pierce", 4)),
 		"lifetime": 2.0, "kind": &"wave", "knockback": 70.0,
+		"bounces": int(stats.get("bounces", 0)),
 	}))
 	player.play_attack()
 	arena.play_sfx(&"slash")
 
 
 func _cast_orbit(stats: Dictionary) -> void:
-	var count: int = stats.get("count", 2)
-	var radius_value: float = stats.get("radius", 74.0)
 	var damage: float = float(stats.get("damage", 7.0)) * damage_multiplier()
-	var positions: Array[Vector2] = []
-	for i in range(count):
-		positions.append(player.global_position + Vector2.from_angle(orbit_angle + TAU * float(i) / float(count)) * radius_value)
-	if stats.get("inner", false):
-		for i in range(maxi(2, count / 2)):
-			positions.append(player.global_position + Vector2.from_angle(-orbit_angle * 1.35 + TAU * float(i) / float(maxi(2, count / 2))) * radius_value * 0.58)
-	for blade_position in positions:
-		arena.add_effect(EffectNode.create(&"orbit", blade_position, {"duration": 0.32, "color": Color("e8e2ff")}))
+	var hit_radius: float = stats.get("hit_radius", 31.0)
+	for tornado_position in _orbit_positions(stats):
 		for enemy in arena.enemies.duplicate():
-			if is_instance_valid(enemy) and not enemy.dead and blade_position.distance_to(enemy.global_position) < 26.0 + enemy.hit_radius:
-				enemy.take_damage(DamageEvent.create(damage, player, blade_position.direction_to(enemy.global_position), 26.0, false, [&"orbit"]))
+			if is_instance_valid(enemy) and not enemy.dead and tornado_position.distance_to(enemy.global_position) < hit_radius + enemy.hit_radius:
+				enemy.take_damage(DamageEvent.create(damage, player, tornado_position.direction_to(enemy.global_position), 38.0, false, [&"tornado", &"orbit"]))
+
+
+func _orbit_positions(stats: Dictionary) -> Array[Vector2]:
+	var positions: Array[Vector2] = []
+	var outer_count: int = stats.get("count", 1)
+	var inner_count: int = stats.get("inner_count", 0)
+	var radius_value: float = stats.get("radius", 78.0)
+	for i in range(outer_count):
+		positions.append(player.global_position + Vector2.from_angle(orbit_angle + TAU * float(i) / float(outer_count)) * radius_value)
+	for i in range(inner_count):
+		positions.append(player.global_position + Vector2.from_angle(-orbit_angle * 1.35 + TAU * float(i) / float(inner_count)) * radius_value * 0.58)
+	return positions
+
+
+func _update_orbit_visuals(stats: Dictionary) -> void:
+	var outer_count: int = stats.get("count", 1)
+	var inner_count: int = stats.get("inner_count", 0)
+	var total_count := outer_count + inner_count
+	while orbit_visuals.size() < total_count:
+		var tornado := Sprite2D.new()
+		tornado.texture = DRAGON_TORNADO_TEXTURE
+		tornado.hframes = 6
+		tornado.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tornado.z_index = 7
+		add_child(tornado)
+		orbit_visuals.append(tornado)
+	while orbit_visuals.size() > total_count:
+		var removed: Sprite2D = orbit_visuals.pop_back()
+		removed.queue_free()
+	var positions := _orbit_positions(stats)
+	for i in range(orbit_visuals.size()):
+		var tornado := orbit_visuals[i]
+		tornado.global_position = positions[i]
+		tornado.frame = (int(orbit_animation_time) + i * 2) % 6
+		tornado.scale = Vector2.ONE * (0.88 if i >= outer_count else 1.0)
+		tornado.modulate = Color(0.88, 1.0, 1.0, 0.94)
+
+
+func _clear_orbit_visuals() -> void:
+	for tornado in orbit_visuals:
+		if is_instance_valid(tornado):
+			tornado.queue_free()
+	orbit_visuals.clear()
 
 
 func _cast_thunder(stats: Dictionary) -> void:

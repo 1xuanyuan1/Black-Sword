@@ -64,6 +64,12 @@ func _ready() -> void:
 	_show_title()
 	if "--qa-battle" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
+	elif "--qa-collision" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_collision_demo")
+	elif "--qa-orbit" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_enable_orbit")
 	elif "--qa-boss" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_spawn_boss")
@@ -85,6 +91,31 @@ func _qa_spawn_boss() -> void:
 	if is_instance_valid(arena):
 		arena.elapsed = Arena.BOSS_SPAWN_TIME
 		arena._start_boss()
+
+
+func _qa_enable_orbit() -> void:
+	await get_tree().process_frame
+	await get_tree().create_timer(0.35).timeout
+	if is_instance_valid(arena):
+		for _level in range(5):
+			arena.skill_system.upgrade(&"orbit_blades")
+
+
+func _qa_collision_demo() -> void:
+	await get_tree().process_frame
+	await get_tree().create_timer(0.35).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.player.global_position = Vector2(690.0, 0.0)
+	Input.action_press("move_right")
+	var projectile := CombatProjectile.create({
+		"arena": arena, "owner": arena.player, "position": Vector2(690.0, -90.0),
+		"direction": Vector2(1.0, 0.2), "speed": 430.0, "damage": 12.0,
+		"radius": 12.0, "lifetime": 3.2, "pierce": 3, "kind": &"sword", "bounces": 3,
+	})
+	arena.add_projectile(projectile)
+	await get_tree().create_timer(1.2).timeout
+	Input.action_release("move_right")
 
 
 func _input(event: InputEvent) -> void:

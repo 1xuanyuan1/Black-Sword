@@ -14,6 +14,8 @@ signal sfx_requested(id: StringName)
 signal music_requested(id: StringName)
 
 const BOSS_SPAWN_TIME := 390.0
+const COURTYARD_INTERIOR := Rect2(-752.0, -496.0, 1504.0, 1048.0)
+const GATE_WAYPOINTS := [Vector2(-16.0, -620.0), Vector2(-16.0, 672.0)]
 
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
@@ -33,11 +35,12 @@ var boss_started := false
 var boss: BossActor
 var projectile_count := 0
 var rng := RandomNumberGenerator.new()
+var backdrop: ArenaBackdrop
 
 
 func _ready() -> void:
 	rng.randomize()
-	var backdrop := ArenaBackdrop.new()
+	backdrop = ArenaBackdrop.new()
 	add_child(backdrop)
 	backdrop.setup(bounds)
 	player = PlayerActor.new()
@@ -133,12 +136,35 @@ func _weighted_enemy(weights: Dictionary) -> StringName:
 
 
 func _spawn_position_around_player() -> Vector2:
-	var angle := rng.randf() * TAU
-	var distance := rng.randf_range(520.0, 680.0)
-	var position := player.global_position + Vector2.from_angle(angle) * distance
-	position.x = clampf(position.x, bounds.position.x + 48.0, bounds.end.x - 48.0)
-	position.y = clampf(position.y, bounds.position.y + 48.0, bounds.end.y - 48.0)
-	return position
+	var fallback := player.global_position + Vector2(420.0, 0.0)
+	for _attempt in range(16):
+		var angle := rng.randf() * TAU
+		var distance := rng.randf_range(460.0, 650.0)
+		var position := player.global_position + Vector2.from_angle(angle) * distance
+		position.x = clampf(position.x, bounds.position.x + 48.0, bounds.end.x - 48.0)
+		position.y = clampf(position.y, bounds.position.y + 48.0, bounds.end.y - 48.0)
+		fallback = position
+		if not is_instance_valid(backdrop) or backdrop.is_point_clear(position, 34.0):
+			return position
+	return fallback
+
+
+func navigation_direction(from_position: Vector2, target_position: Vector2) -> Vector2:
+	var from_inside := COURTYARD_INTERIOR.has_point(from_position)
+	var target_inside := COURTYARD_INTERIOR.has_point(target_position)
+	if from_inside == target_inside:
+		return from_position.direction_to(target_position)
+	var best_gate: Vector2 = GATE_WAYPOINTS[0]
+	var best_distance := INF
+	for gate_value in GATE_WAYPOINTS:
+		var gate: Vector2 = gate_value
+		var route_distance: float = from_position.distance_to(gate) + gate.distance_to(target_position)
+		if route_distance < best_distance:
+			best_distance = route_distance
+			best_gate = gate
+	if from_position.distance_to(best_gate) > 82.0:
+		return from_position.direction_to(best_gate)
+	return from_position.direction_to(target_position)
 
 
 func _start_boss() -> void:

@@ -20,12 +20,54 @@ func _run() -> void:
 	_check(registry.validate().is_empty(), "内容注册表包含 10 个五级技能、4 类敌人与 4 个波次")
 	_check(registry.wave_for_time(0.0).title == "第一夜·尸行", "0 秒进入第一波")
 	_check(registry.wave_for_time(389.0).title == "第四夜·怨军", "Boss 前处于第四波")
+	var orbit_definition: SkillDefinition = registry.skills[&"orbit_blades"]
+	var orbit_growth_valid := true
+	var last_damage := 0.0
+	var last_count := 0
+	var last_speed := 0.0
+	for level in range(1, 6):
+		var orbit_stats := orbit_definition.stats(level)
+		var total_count: int = int(orbit_stats.get("count", 0)) + int(orbit_stats.get("inner_count", 0))
+		if float(orbit_stats.get("damage", 0.0)) <= last_damage or total_count <= last_count or float(orbit_stats.get("rotation_speed", 0.0)) <= last_speed:
+			orbit_growth_valid = false
+		last_damage = orbit_stats.get("damage", 0.0)
+		last_count = total_count
+		last_speed = orbit_stats.get("rotation_speed", 0.0)
+	_check(orbit_growth_valid, "回风护体每级提升伤害、龙卷数量与旋转速度")
+	_check(int(registry.skills[&"flying_sword"].stats(2).get("bounces", 0)) == 1, "二级飞剑开始获得墙壁反弹")
+	_check(int(registry.skills[&"sword_wave"].stats(5).get("bounces", 0)) == 2, "满级剑气可连续反弹两次")
 	var arena := Arena.new()
 	root.add_child(arena)
 	await process_frame
 	await process_frame
 	arena.spawn_timer = 9999.0
 	_check(is_instance_valid(arena.player), "玩家成功创建")
+	_check(arena.player.get_collision_mask_value(2), "玩家启用世界障碍碰撞层")
+	_check(arena.backdrop.world_collision_count(&"world_walls") == 6, "庭院六段墙体碰撞成功创建并保留上下入口")
+	_check(arena.backdrop.world_collision_count(&"world_trees") == 14, "十四棵树均创建独立树干碰撞")
+	_check(not arena.backdrop.is_point_clear(Vector2(800.0, 0.0), 0.0), "右侧石墙区域会阻挡实体")
+	_check(arena.backdrop.is_point_clear(Vector2(0.0, -540.0), 10.0), "北侧院门保留可通行缺口")
+	_check(not arena.backdrop.is_point_clear(Vector2(-1352.0, -399.0), 0.0), "树干中心会阻挡实体但树冠不扩大碰撞")
+	var routed_direction := arena.navigation_direction(Vector2(1000.0, 0.0), Vector2.ZERO)
+	_check(routed_direction.x < 0.0 and routed_direction.y < -0.1, "院外敌人会先绕向最近入口而非卡在侧墙")
+	var bouncing_projectile := CombatProjectile.create({
+		"arena": arena, "owner": arena.player, "position": Vector2(700.0, 0.0),
+		"direction": Vector2.RIGHT, "speed": 500.0, "damage": 1.0,
+		"radius": 10.0, "lifetime": 1.2, "pierce": 0, "kind": &"sword", "bounces": 1,
+	})
+	arena.add_projectile(bouncing_projectile)
+	await create_timer(0.32).timeout
+	_check(is_instance_valid(bouncing_projectile) and bouncing_projectile.bounce_count == 1 and bouncing_projectile.direction.x < 0.0, "飞剑撞墙后反射并扣除一次反弹")
+	if is_instance_valid(bouncing_projectile):
+		bouncing_projectile.queue_free()
+	var blocked_projectile := CombatProjectile.create({
+		"arena": arena, "owner": arena.player, "position": Vector2(700.0, 80.0),
+		"direction": Vector2.RIGHT, "speed": 500.0, "damage": 1.0,
+		"radius": 10.0, "lifetime": 1.2, "pierce": 0, "kind": &"wave", "bounces": 0,
+	})
+	arena.add_projectile(blocked_projectile)
+	await create_timer(0.32).timeout
+	_check(not is_instance_valid(blocked_projectile), "无反弹次数的弹丸撞墙后销毁")
 	_check(arena.skill_system.levels.get(&"black_slash", 0) == 1, "开局自带黑剑·横扫")
 	var system := arena.skill_system
 	system.upgrade(&"flying_sword")

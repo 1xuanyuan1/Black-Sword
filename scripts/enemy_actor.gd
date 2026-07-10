@@ -26,6 +26,9 @@ func setup(new_arena: Node, new_definition: EnemyDefinition, is_elite: bool = fa
 	arena = new_arena
 	definition = new_definition
 	elite = is_elite
+	collision_layer = 1
+	collision_mask = 1
+	set_collision_mask_value(2, true)
 	max_health = definition.max_health * health_multiplier * (2.15 if elite else 1.0)
 	health = max_health
 	hit_radius = 24.0 if definition.id == &"revenant" else 17.0
@@ -68,7 +71,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _update_behavior(delta: float) -> void:
-	var to_player := global_position.direction_to(arena.player.global_position)
+	var to_player: Vector2 = arena.navigation_direction(global_position, arena.player.global_position)
 	var distance := global_position.distance_to(arena.player.global_position)
 	match definition.behavior:
 		&"ranged":

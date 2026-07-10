@@ -4,6 +4,7 @@
 from collections import deque
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
+import math
 import random
 
 
@@ -11,11 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "assets/source/hero_reference.png"
 HERO_OUT = ROOT / "assets/actors/hero/hero_actual.png"
 PORTRAIT_OUT = ROOT / "assets/actors/hero/portrait_actual.png"
+TORNADO_OUT = ROOT / "assets/vfx/dragon_tornado.png"
 MAP_OUT = ROOT / "assets/world/arena_background.png"
-FLOOR_SOURCE = ROOT / "assets/world/tileset_floor.png"
 RUINS_SOURCE = ROOT / "assets/world/tileset_ruins.png"
 COURTYARD_SOURCE = ROOT / "assets/world/tileset_courtyard.png"
-DETAIL_SOURCE = ROOT / "assets/world/tileset_detail.png"
 
 
 STRIPS = [
@@ -247,6 +247,99 @@ def _paste_scaled(canvas: Image.Image, sprite: Image.Image, xy: tuple[int, int],
     canvas.alpha_composite(sprite, xy)
 
 
+def build_rubble_patch(flip: bool = False) -> Image.Image:
+    """Draw one coherent low mossy stone pile without atlas-neighbour fragments."""
+    patch = Image.new("RGBA", (72, 30), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(patch, "RGBA")
+    draw.ellipse((5, 20, 67, 28), fill=(8, 16, 18, 115))
+    stones = [
+        (4, 13, 20, 24, [(6, 18), (9, 13), (17, 12), (21, 17), (18, 24), (8, 24)]),
+        (17, 8, 35, 24, [(18, 17), (21, 9), (30, 7), (36, 13), (34, 22), (27, 25), (19, 22)]),
+        (32, 12, 50, 25, [(33, 18), (38, 12), (47, 12), (52, 18), (48, 25), (37, 25)]),
+        (49, 9, 68, 24, [(50, 16), (55, 9), (64, 10), (69, 16), (66, 23), (57, 25), (50, 21)]),
+    ]
+    for index, (_x0, _y0, _x1, _y1, polygon) in enumerate(stones):
+        fill = [(105, 104, 88, 255), (119, 112, 91, 255), (91, 96, 82, 255), (111, 103, 84, 255)][index]
+        draw.polygon(polygon, fill=fill, outline=(39, 48, 45, 255))
+        x, y = polygon[1]
+        draw.line((x + 2, y + 2, x + 7, y + 1), fill=(153, 142, 110, 150), width=1)
+    draw.line((8, 13, 15, 12, 21, 14), fill=(68, 91, 51, 255), width=2)
+    draw.line((28, 8, 34, 10, 39, 12), fill=(73, 94, 52, 255), width=2)
+    draw.line((52, 10, 59, 9, 65, 12), fill=(67, 88, 49, 255), width=2)
+    for x in (2, 24, 46, 69):
+        draw.line((x, 25, x + 1, 20), fill=(55, 79, 48, 230), width=1)
+        draw.line((x + 2, 25, x + 4, 21), fill=(62, 86, 49, 220), width=1)
+    return patch.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else patch
+
+
+def build_dragon_tornado() -> None:
+    """Create a six-frame transparent pixel-art sword-wind tornado atlas."""
+    frame_size = 64
+    frame_count = 6
+    atlas = Image.new("RGBA", (frame_size * frame_count, frame_size), (0, 0, 0, 0))
+    for frame_index in range(frame_count):
+        frame = Image.new("RGBA", (frame_size, frame_size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(frame, "RGBA")
+        phase = frame_index * 60
+
+        # A restrained contact shadow keeps the funnel readable on cobbles.
+        draw.ellipse((20, 53, 44, 58), fill=(5, 13, 22, 92))
+
+        # Tapered mist body, deliberately asymmetric from frame to frame.
+        body = [
+            (21 + (frame_index % 2), 17),
+            (43, 17 + ((frame_index + 1) % 2)),
+            (39, 31),
+            (36, 43),
+            (34, 54),
+            (29, 54),
+            (27, 43),
+            (24, 31),
+        ]
+        draw.polygon(body, fill=(49, 118, 137, 82))
+
+        bands = [
+            (18, 20, 7),
+            (25, 18, 7),
+            (33, 15, 6),
+            (41, 12, 5),
+            (49, 8, 4),
+        ]
+        for band_index, (y, half_width, half_height) in enumerate(bands):
+            wobble = round(2.0 * math.sin(math.radians(phase + band_index * 71)))
+            box = (32 + wobble - half_width, y - half_height, 32 + wobble + half_width, y + half_height)
+            start = phase + band_index * 43
+            draw.arc(box, start + 12, start + 196, fill=(24, 67, 91, 245), width=4)
+            draw.arc(box, start + 180, start + 342, fill=(82, 185, 194, 245), width=3)
+            draw.arc(box, start + 220, start + 305, fill=(218, 247, 238, 238), width=2)
+
+        # A small wind-dragon head rides the upper coil: snout, horn and eye.
+        facing = 1 if frame_index in (0, 1, 5) else -1
+        head_x = 32 + (4 if facing > 0 else -4)
+        head = [
+            (head_x - 7 * facing, 17),
+            (head_x - 4 * facing, 11),
+            (head_x + 1 * facing, 8),
+            (head_x + 7 * facing, 11),
+            (head_x + 9 * facing, 15),
+            (head_x + 4 * facing, 18),
+            (head_x - 1 * facing, 17),
+        ]
+        draw.polygon(head, fill=(83, 182, 191, 255), outline=(18, 48, 70, 255))
+        draw.line((head_x - 2 * facing, 10, head_x - 4 * facing, 5), fill=(190, 238, 226, 255), width=2)
+        draw.line((head_x + 1 * facing, 9, head_x + 2 * facing, 5), fill=(190, 238, 226, 255), width=2)
+        draw.point((head_x + 3 * facing, 12), fill=(255, 226, 111, 255))
+        draw.line((head_x + 6 * facing, 15, head_x + 10 * facing, 14), fill=(222, 248, 240, 255), width=1)
+
+        # Loose wisps sell rotation without enlarging the damage footprint.
+        draw.arc((7, 25, 31, 45), phase + 20, phase + 155, fill=(99, 197, 202, 185), width=2)
+        draw.arc((35, 20, 58, 42), phase + 188, phase + 320, fill=(186, 235, 228, 185), width=2)
+        atlas.alpha_composite(frame, (frame_index * frame_size, 0))
+
+    TORNADO_OUT.parent.mkdir(parents=True, exist_ok=True)
+    atlas.save(TORNADO_OUT, optimize=True)
+
+
 def build_map() -> None:
     random.seed(1907)
     ruins = Image.open(RUINS_SOURCE).convert("RGBA")
@@ -347,10 +440,12 @@ def build_map() -> None:
             fill=(4, 11, 13, 105),
         )
         _paste_scaled(canvas, tree, (x, y), scale, flip)
-    stones = _crop_rgba(ruins, (76, 39, 180, 88))
-    stones = ImageEnhance.Brightness(stones).enhance(0.56)
-    _paste_scaled(canvas, stones, (66, 356), 0.68)
-    _paste_scaled(canvas, stones, (631, 356), 0.68, True)
+    # Compact mossy rubble replaces the old wide atlas crop that included
+    # unrelated beams, a well rim and partial neighbouring sprites.
+    rubble_left = build_rubble_patch(False)
+    rubble_right = build_rubble_patch(True)
+    _paste_scaled(canvas, rubble_left, (68, 382), 0.88)
+    _paste_scaled(canvas, rubble_right, (637, 378), 0.88)
 
     # Small hand-drawn tufts avoid chopped fragments from the tightly packed
     # detail spritesheet while still breaking up the empty exterior ground.
@@ -414,7 +509,9 @@ def build_map() -> None:
 
 if __name__ == "__main__":
     build_hero()
+    build_dragon_tornado()
     build_map()
     print(HERO_OUT)
     print(PORTRAIT_OUT)
+    print(TORNADO_OUT)
     print(MAP_OUT)

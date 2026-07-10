@@ -23,6 +23,9 @@ var knockback_velocity := Vector2.ZERO
 func setup(new_arena: Node) -> void:
 	arena = new_arena
 	add_to_group("player")
+	collision_layer = 1
+	collision_mask = 1
+	set_collision_mask_value(2, true)
 	visual.setup(HERO_TEXTURE, &"hero_actual", 0.72, Color.WHITE)
 	add_child(visual)
 	var collision := CollisionShape2D.new()
