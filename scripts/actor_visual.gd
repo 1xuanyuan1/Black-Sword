@@ -16,9 +16,10 @@ const OCAD_WALK_SIDE := [
 	Rect2(63, 84, 21, 42), Rect2(84, 84, 21, 42), Rect2(105, 84, 21, 42),
 ]
 const OCAD_CAST := [
-	Rect2(0, 168, 42, 42), Rect2(42, 168, 42, 42), Rect2(84, 168, 42, 42),
-	Rect2(126, 168, 42, 42), Rect2(168, 168, 42, 42), Rect2(210, 168, 42, 42),
-	Rect2(0, 210, 42, 42), Rect2(42, 210, 42, 42),
+	Rect2(0, 168, 21, 42), Rect2(21, 168, 21, 42), Rect2(42, 168, 21, 42),
+	Rect2(63, 168, 21, 42), Rect2(84, 168, 21, 42), Rect2(105, 168, 21, 42),
+	Rect2(126, 168, 21, 42), Rect2(147, 168, 21, 42), Rect2(168, 168, 21, 42),
+	Rect2(189, 168, 21, 42), Rect2(210, 168, 21, 42), Rect2(231, 168, 21, 42),
 ]
 const OCAD_IDLE_DOWN := Rect2(189, 126, 21, 42)
 const OCAD_IDLE_SIDE := Rect2(210, 126, 21, 42)
@@ -86,6 +87,7 @@ func play_attack(duration: float = 0.22) -> void:
 	if dead:
 		return
 	state = &"attack"
+	animation_time = 0.0
 	attack_variant = 1 - attack_variant
 	state_timer = duration
 	var tween := create_tween()
@@ -97,6 +99,7 @@ func play_hurt() -> void:
 	if dead:
 		return
 	state = &"hurt"
+	animation_time = 0.0
 	state_timer = 0.2
 	sprite.modulate = Color("fff1f1")
 	var tween := create_tween()
@@ -111,6 +114,7 @@ func play_death() -> void:
 		return
 	dead = true
 	state = &"death"
+	animation_time = 0.0
 	_update_frame()
 	var tween := create_tween()
 	tween.tween_property(sprite, "rotation", 0.38, 0.22).set_trans(Tween.TRANS_BACK)
@@ -166,7 +170,7 @@ func _update_ocad_frame() -> void:
 			var walk_region: Rect2 = frames[frame_index]
 			sprite.region_rect = walk_region
 		&"attack":
-			var cast_index: int = int(animation_time * 12.0) % OCAD_CAST.size()
+			var cast_index: int = int(animation_time * 36.0) % OCAD_CAST.size()
 			var cast_region: Rect2 = OCAD_CAST[cast_index]
 			sprite.region_rect = cast_region
 			sprite.flip_h = facing.x > 0.0

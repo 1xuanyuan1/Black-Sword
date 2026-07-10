@@ -11,12 +11,15 @@ var direction: Vector2 = Vector2.ZERO
 var input_enabled: bool = true
 var active_touch_index: int = -1
 var mouse_dragging: bool = false
+var active: bool = false
+var joystick_origin: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	focus_mode = Control.FOCUS_NONE
+	joystick_origin = size * 0.5
 	queue_redraw()
 
 
@@ -32,7 +35,7 @@ func _gui_input(event: InputEvent) -> void:
 		var touch_event := event as InputEventScreenTouch
 		if touch_event.pressed and active_touch_index < 0:
 			active_touch_index = touch_event.index
-			_update_direction(touch_event.position)
+			_begin_input(touch_event.position)
 			accept_event()
 		elif not touch_event.pressed and touch_event.index == active_touch_index:
 			reset_input()
@@ -47,7 +50,7 @@ func _gui_input(event: InputEvent) -> void:
 		if mouse_button.button_index == MOUSE_BUTTON_LEFT:
 			mouse_dragging = mouse_button.pressed
 			if mouse_dragging:
-				_update_direction(mouse_button.position)
+				_begin_input(mouse_button.position)
 			else:
 				reset_input()
 			accept_event()
@@ -67,12 +70,24 @@ func set_input_enabled(value: bool) -> void:
 func reset_input() -> void:
 	active_touch_index = -1
 	mouse_dragging = false
+	active = false
 	_set_direction(Vector2.ZERO)
+	queue_redraw()
+
+
+func _begin_input(local_position: Vector2) -> void:
+	active = true
+	var safe_margin: float = joystick_radius + 22.0
+	joystick_origin = Vector2(
+		clampf(local_position.x, safe_margin, maxf(safe_margin, size.x - safe_margin)),
+		clampf(local_position.y, safe_margin, maxf(safe_margin, size.y - safe_margin)),
+	)
+	_update_direction(local_position)
+	queue_redraw()
 
 
 func _update_direction(local_position: Vector2) -> void:
-	var center: Vector2 = size * 0.5
-	var raw_direction: Vector2 = (local_position - center) / maxf(joystick_radius, 1.0)
+	var raw_direction: Vector2 = (local_position - joystick_origin) / maxf(joystick_radius, 1.0)
 	var next_direction: Vector2 = raw_direction.limit_length(1.0)
 	if next_direction.length() < dead_zone:
 		next_direction = Vector2.ZERO
@@ -88,13 +103,14 @@ func _set_direction(next_direction: Vector2) -> void:
 
 
 func _draw() -> void:
-	var center: Vector2 = size * 0.5
-	var knob_position: Vector2 = center + direction * joystick_radius
-	draw_circle(center, joystick_radius + 13.0, Color(0.025, 0.045, 0.08, 0.48))
-	draw_circle(center, joystick_radius, Color(0.12, 0.23, 0.34, 0.34))
-	draw_arc(center, joystick_radius, 0.0, TAU, 72, Color(0.48, 0.76, 0.88, 0.62), 3.0, true)
-	draw_line(center + Vector2(-joystick_radius * 0.68, 0.0), center + Vector2(joystick_radius * 0.68, 0.0), Color(0.65, 0.84, 0.91, 0.24), 2.0)
-	draw_line(center + Vector2(0.0, -joystick_radius * 0.68), center + Vector2(0.0, joystick_radius * 0.68), Color(0.65, 0.84, 0.91, 0.24), 2.0)
+	if not active:
+		return
+	var knob_position: Vector2 = joystick_origin + direction * joystick_radius
+	draw_circle(joystick_origin, joystick_radius + 13.0, Color(0.025, 0.045, 0.08, 0.48))
+	draw_circle(joystick_origin, joystick_radius, Color(0.12, 0.23, 0.34, 0.34))
+	draw_arc(joystick_origin, joystick_radius, 0.0, TAU, 72, Color(0.48, 0.76, 0.88, 0.62), 3.0, true)
+	draw_line(joystick_origin + Vector2(-joystick_radius * 0.68, 0.0), joystick_origin + Vector2(joystick_radius * 0.68, 0.0), Color(0.65, 0.84, 0.91, 0.24), 2.0)
+	draw_line(joystick_origin + Vector2(0.0, -joystick_radius * 0.68), joystick_origin + Vector2(0.0, joystick_radius * 0.68), Color(0.65, 0.84, 0.91, 0.24), 2.0)
 	draw_circle(knob_position, knob_radius + 5.0, Color(0.03, 0.08, 0.13, 0.72))
 	draw_circle(knob_position, knob_radius, Color(0.43, 0.78, 0.88, 0.78))
 	draw_arc(knob_position, knob_radius, 0.0, TAU, 48, Color(0.83, 0.96, 1.0, 0.92), 2.0, true)

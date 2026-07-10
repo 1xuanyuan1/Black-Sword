@@ -69,10 +69,12 @@ func _run() -> void:
 	var joystick: MovementJoystick = joystick_scene.instantiate() as MovementJoystick
 	root.add_child(joystick)
 	await process_frame
-	joystick._update_direction(joystick.size * 0.5 + Vector2(joystick.joystick_radius, 0.0))
-	_check(joystick.mouse_filter == Control.MOUSE_FILTER_STOP and joystick.direction.x > 0.99, "移动端虚拟摇杆可捕获触摸并输出方向")
+	var floating_joystick_origin := Vector2(180.0, 410.0)
+	joystick._begin_input(floating_joystick_origin)
+	joystick._update_direction(floating_joystick_origin + Vector2(joystick.joystick_radius, 0.0))
+	_check(joystick.mouse_filter == Control.MOUSE_FILTER_STOP and joystick.active and joystick.direction.x > 0.99, "移动端浮动摇杆可在左半屏按下位置出现并输出方向")
 	joystick.reset_input()
-	_check(joystick.direction == Vector2.ZERO, "虚拟摇杆释放后会清空移动方向")
+	_check(not joystick.active and joystick.direction == Vector2.ZERO, "浮动摇杆松手后隐藏并清空移动方向")
 	joystick.queue_free()
 	_check(int(ProjectSettings.get_setting("display/window/handheld/orientation", -1)) == 4, "移动端窗口使用横屏方向")
 	_check(bool(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", false)), "触摸可映射到角色卡和菜单按钮")
@@ -160,6 +162,10 @@ func _run() -> void:
 	_check(orbit_growth_valid, "回风护体每级提升伤害、龙卷数量与旋转速度")
 	_check(int(registry.skills[&"flying_sword"].stats(2).get("bounces", 0)) == 1, "二级飞剑开始获得障碍反弹")
 	_check(int(registry.skills[&"sword_wave"].stats(5).get("bounces", 0)) == 2, "满级剑气可连续反弹两次")
+	var minato_attack_frames_valid := ActorVisual.OCAD_CAST.size() == 12
+	for minato_attack_frame: Rect2 in ActorVisual.OCAD_CAST:
+		minato_attack_frames_valid = minato_attack_frames_valid and minato_attack_frame.size == Vector2(21.0, 42.0)
+	_check(minato_attack_frames_valid, "水门攻击动画按单个 21×42 角色帧裁切，不会带出相邻角色")
 	var arena: Arena = battle_scene.instantiate() as Arena
 	root.add_child(arena)
 	await process_frame
