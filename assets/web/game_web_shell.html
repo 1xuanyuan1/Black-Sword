@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
+		<title>$GODOT_PROJECT_NAME</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+html, body {
+	width: 100%;
+	height: 100%;
+	background: #080f1b;
+	overflow: hidden;
+	touch-action: none;
+	overscroll-behavior: none;
+}
+
+#canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+#status {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	background-color: $GODOT_SPLASH_COLOR;
+	visibility: hidden;
+}
+
+#status-splash {
+	position: absolute;
+	inset: 0;
+	max-width: 100%;
+	max-height: 100%;
+	margin: auto;
+}
+
+#status-splash.show-image--false {
+	display: none;
+}
+
+#status-splash.fullsize--true {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+#status-splash.use-filter--false {
+	image-rendering: pixelated;
+}
+
+#status-progress {
+	position: absolute;
+	left: 25%;
+	right: 25%;
+	bottom: 8%;
+	width: 50%;
+	display: none;
+}
+
+#status-notice {
+	z-index: 1;
+	display: none;
+	max-width: min(80vw, 720px);
+	padding: 1rem 1.4rem;
+	border: 1px solid #9b3943;
+	border-radius: 0.5rem;
+	background: #5b3943;
+	color: #f1e7e7;
+	font-family: sans-serif;
+	line-height: 1.5;
+	text-align: center;
+}
+
+#orientation-gate {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	gap: 1rem;
+	padding: 2rem;
+	background: radial-gradient(circle at center, #172b42 0%, #080f1b 68%);
+	color: #edf7ff;
+	font-family: sans-serif;
+	text-align: center;
+}
+
+#orientation-gate[hidden] {
+	display: none;
+}
+
+#orientation-icon {
+	font-size: clamp(3.5rem, 16vw, 7rem);
+	line-height: 1;
+	transform: rotate(90deg);
+}
+
+#orientation-title {
+	margin: 0;
+	font-size: clamp(1.5rem, 6vw, 2.6rem);
+}
+
+#orientation-hint {
+	max-width: 32rem;
+	margin: 0;
+	color: #afc5d9;
+	font-size: clamp(1rem, 3.8vw, 1.35rem);
+}
+
+#orientation-action {
+	min-width: 13rem;
+	min-height: 3.25rem;
+	padding: 0.7rem 1.4rem;
+	border: 2px solid #78c9e6;
+	border-radius: 0.7rem;
+	background: #17334d;
+	color: #f2fbff;
+	font-size: 1.15rem;
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">当前浏览器不支持 Canvas。</canvas>
+		<noscript>需要启用 JavaScript 才能运行游戏。</noscript>
+		<div id="status">
+			<img id="status-splash" class="$GODOT_SPLASH_CLASSES" src="$GODOT_SPLASH" alt="">
+			<progress id="status-progress"></progress>
+			<div id="status-notice"></div>
+		</div>
+		<div id="orientation-gate" hidden>
+			<div id="orientation-icon" aria-hidden="true">▯</div>
+			<h1 id="orientation-title">请旋转手机</h1>
+			<p id="orientation-hint">《黑剑·荒寺夜行》需要横屏游玩，请关闭竖屏锁定并旋转设备。</p>
+			<button id="orientation-action" type="button">进入横屏游戏</button>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+	const orientationGate = document.getElementById('orientation-gate');
+	const orientationAction = document.getElementById('orientation-action');
+	let initializing = true;
+	let gameStarted = false;
+
+	function showStatus(mode) {
+		if (!initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+	}
+
+	function fail(error) {
+		console.error(error);
+		statusNotice.textContent = error instanceof Error ? error.message : String(error);
+		showStatus('notice');
+		initializing = false;
+	}
+
+	// 保留 Godot 对 Secure Context、WebGL2 与 Fetch 等浏览器能力的完整校验。
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		fail('浏览器缺少运行游戏所需能力：\n' + missing.join('\n'));
+		return;
+	}
+
+	function isPortrait() {
+		return window.innerHeight > window.innerWidth;
+	}
+
+	function startGameOnce() {
+		if (gameStarted || isPortrait()) {
+			return;
+		}
+		gameStarted = true;
+		showStatus('progress');
+		engine.startGame({
+			onProgress(current, total) {
+				if (current > 0 && total > 0) {
+					statusProgress.value = current;
+					statusProgress.max = total;
+				} else {
+					statusProgress.removeAttribute('value');
+					statusProgress.removeAttribute('max');
+				}
+			},
+		}).then(() => showStatus('hidden'), fail);
+	}
+
+	function updateOrientation() {
+		const portrait = isPortrait();
+		orientationGate.hidden = !portrait;
+		if (!portrait) {
+			startGameOnce();
+		}
+	}
+
+	orientationAction.addEventListener('click', async () => {
+		try {
+			if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+				await document.documentElement.requestFullscreen();
+			}
+			if (screen.orientation && screen.orientation.lock) {
+				await screen.orientation.lock('landscape');
+			}
+		} catch (_error) {
+			// 微信等内置浏览器可能拒绝方向锁；保留旋转提示供用户手动横屏。
+		}
+		updateOrientation();
+	});
+
+	window.addEventListener('resize', updateOrientation);
+	window.addEventListener('orientationchange', updateOrientation);
+	updateOrientation();
+}());
+		</script>
+	</body>
+</html>

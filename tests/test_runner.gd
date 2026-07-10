@@ -76,6 +76,8 @@ func _run() -> void:
 	joystick.queue_free()
 	_check(int(ProjectSettings.get_setting("display/window/handheld/orientation", -1)) == 4, "移动端窗口使用横屏方向")
 	_check(bool(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", false)), "触摸可映射到角色卡和菜单按钮")
+	var web_shell: String = FileAccess.get_file_as_string("res://assets/web/game_web_shell.html")
+	_check(web_shell.contains("orientation-gate") and web_shell.contains("screen.orientation.lock('landscape')"), "手机网页在竖屏时提示旋转并尝试锁定横屏")
 	var minato_arena: Arena = battle_scene.instantiate() as Arena
 	minato_arena.selected_character_id = &"minato"
 	root.add_child(minato_arena)

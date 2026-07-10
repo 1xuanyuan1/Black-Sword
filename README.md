@@ -25,7 +25,7 @@
 | 选择升级 | 鼠标点击或数字键 `1`、`2`、`3` |
 | 攻击 | 自动索敌并释放 |
 
-移动端与手机浏览器使用横屏布局：左下角虚拟摇杆控制移动，右上角触摸按钮暂停；角色卡、技能三选一以及菜单按钮均可直接触摸选择。
+移动端与手机浏览器使用横屏布局：竖屏打开时会先显示旋转提示，不再拉长战斗画面；左下角虚拟摇杆控制移动，右上角触摸按钮暂停；角色卡、技能三选一以及菜单按钮均可直接触摸选择。
 
 升级界面出现时战斗会完全暂停。每局最多持有 4 个主动招式和 2 个被动心法。
 
@@ -222,7 +222,7 @@ macOS 默认安装位置下可使用：
 godot --headless --path . --export-release Web builds/web/index.html
 ```
 
-当前测试站点为 [http://game.dduke.cn](http://game.dduke.cn)，Nginx 配置保存在 [`deploy/nginx/game.dduke.cn.conf`](deploy/nginx/game.dduke.cn.conf)。Web 构建产物位于 `builds/web/`，该目录已加入 `.gitignore`，不应提交到源码仓库。
+当前测试站点为 [https://game.dduke.cn](https://game.dduke.cn)，HTTP 请求会自动跳转到 HTTPS。Nginx 配置保存在 [`deploy/nginx/game.dduke.cn.conf`](deploy/nginx/game.dduke.cn.conf)，Web 横屏启动页保存在 [`assets/web/game_web_shell.html`](assets/web/game_web_shell.html)。Web 构建产物位于 `builds/web/`，该目录已加入 `.gitignore`，不应提交到源码仓库。
 
 ## 主要场景预设
 

@@ -48,6 +48,7 @@ var pause_open := false
 var game_running := false
 var character_select_open := false
 var selected_character_id: StringName = &"black_sword"
+var orientation_pause_active := false
 
 
 func _ready() -> void:
@@ -91,6 +92,25 @@ func _ready() -> void:
 		call_deferred("_start_game")
 	elif "--qa-character-select" in OS.get_cmdline_user_args():
 		call_deferred("_show_character_selection")
+
+
+func _process(_delta: float) -> void:
+	if not game_running or not _touch_controls_supported():
+		orientation_pause_active = false
+		return
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var is_portrait := viewport_size.y > viewport_size.x
+	if is_portrait and not orientation_pause_active:
+		orientation_pause_active = true
+		_release_virtual_movement()
+		_set_touch_movement_enabled(false)
+		if not leveling and not pause_open:
+			get_tree().paused = true
+	elif not is_portrait and orientation_pause_active:
+		orientation_pause_active = false
+		if not leveling and not pause_open:
+			get_tree().paused = false
+			_set_touch_movement_enabled(true)
 
 
 func _exit_tree() -> void:
@@ -192,6 +212,7 @@ func _clear_world() -> void:
 
 func _show_title() -> void:
 	game_running = false
+	orientation_pause_active = false
 	character_select_open = false
 	leveling = false
 	pause_open = false
@@ -403,6 +424,7 @@ func _start_game() -> void:
 	_clear_world()
 	_clear_ui()
 	game_running = true
+	orientation_pause_active = false
 	arena = BATTLE_ARENA_SCENE.instantiate() as Arena
 	arena.selected_character_id = selected_character_id
 	world_holder.add_child(arena)
