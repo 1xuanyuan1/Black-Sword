@@ -72,7 +72,7 @@ func _ready() -> void:
 		run_config = RunConfig.default_for_character(selected_character_id)
 	else:
 		selected_character_id = run_config.character_id
-	backdrop.setup(bounds)
+	backdrop.setup(bounds, self)
 	var character_definition := ContentDatabase.character(selected_character_id)
 	if character_definition == null:
 		selected_character_id = &"black_sword"
@@ -142,6 +142,7 @@ func _on_wave_started(index: int, definition: WaveDefinition) -> void:
 	if definition.kind == WaveDefinition.WaveKind.NORMAL:
 		item_drop_system.start_wave(index)
 	spawn_director.begin_wave(definition)
+	backdrop.on_wave_started(definition)
 	announce(definition.title, Color("d9e4ff"))
 
 

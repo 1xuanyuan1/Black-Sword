@@ -4,6 +4,8 @@ extends CharacterBody2D
 signal health_changed(current: float, maximum: float)
 signal defeated
 
+enum BossState { ENTER, CHASE, WINDUP, ATTACK, RECOVER, PHASE_TRANSITION, DEAD }
+
 const IDLE_TEXTURE := preload("res://assets/actors/boss/Idle.png")
 const WALK_TEXTURE := preload("res://assets/actors/boss/Walk.png")
 const HIT_TEXTURE := preload("res://assets/actors/boss/Hit.png")
@@ -39,6 +41,11 @@ var entered_phase_two := false
 var entered_phase_three := false
 var slow_multiplier := 1.0
 var slow_timer := 0.0
+var state := BossState.ENTER
+var enter_timer := 0.8
+var recovery_timer := 0.0
+var phase_transition_timer := 0.0
+var state_history: Array[BossState] = [BossState.ENTER]
 
 
 func setup(new_arena: Node) -> void:
@@ -50,6 +57,7 @@ func setup(new_arena: Node) -> void:
 	collision_mask = 0
 	set_collision_mask_value(2, true)
 	_set_animation(&"idle")
+	set_state(BossState.ENTER)
 	z_index = 8
 	health_changed.emit(health, max_health)
 
@@ -59,16 +67,31 @@ func _physics_process(delta: float) -> void:
 	if dead or not is_instance_valid(arena) or not arena.run_active or not is_instance_valid(arena.player):
 		velocity = Vector2.ZERO
 		return
+	if state == BossState.ENTER:
+		enter_timer -= delta
+		velocity = Vector2.ZERO
+		if enter_timer <= 0.0:
+			set_state(BossState.CHASE)
+		return
+	if state == BossState.PHASE_TRANSITION:
+		phase_transition_timer -= delta
+		velocity = Vector2.ZERO
+		if phase_transition_timer <= 0.0:
+			set_state(BossState.CHASE)
+		return
 	var ratio := health / max_health
-	phase = 3 if ratio <= 0.4 else (2 if ratio <= 0.7 else 1)
-	if phase >= 2 and not entered_phase_two:
+	var target_phase := 3 if ratio <= 0.35 else (2 if ratio <= 0.7 else 1)
+	if target_phase >= 2 and not entered_phase_two:
 		entered_phase_two = true
-		arena.announce("剑豪震怒·弹幕解禁", Color("ffb06b"))
-		_start_nova()
-	if phase >= 3 and not entered_phase_three:
+		phase = 2
+		_begin_phase_transition("剑豪震怒·弹幕解禁", Color("ffb06b"))
+		return
+	if target_phase >= 3 and not entered_phase_three:
 		entered_phase_three = true
-		arena.announce("鬼门大开·怨军再临", Color("ff6b81"))
-		arena.summon_minions(5)
+		phase = 3
+		_begin_phase_transition("鬼门大开·怨军再临", Color("ff6b81"))
+		return
+	phase = target_phase
 	attack_timer -= delta
 	summon_timer -= delta
 	if slow_timer > 0.0:
@@ -77,6 +100,7 @@ func _physics_process(delta: float) -> void:
 			slow_multiplier = 1.0
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 220.0 * delta)
 	if charge_time > 0.0:
+		set_state(BossState.ATTACK)
 		charge_time -= delta
 		velocity = pending_direction * (480.0 + phase * 35.0) * slow_multiplier + knockback_velocity
 		_set_animation(&"charge")
@@ -85,12 +109,22 @@ func _physics_process(delta: float) -> void:
 			arena.player.take_damage(DamageEvent.create(24.0 + phase * 4.0, self, pending_direction, 260.0, false, [&"boss_charge"]))
 		if charge_time <= 0.0:
 			attack_timer = 1.4
+			recovery_timer = 0.28
+			set_state(BossState.RECOVER)
 	elif windup > 0.0:
+		set_state(BossState.WINDUP)
 		windup -= delta
 		velocity = knockback_velocity
 		if windup <= 0.0:
 			_resolve_pending_attack()
+	elif recovery_timer > 0.0:
+		recovery_timer -= delta
+		velocity = knockback_velocity
+		set_state(BossState.RECOVER)
+		if recovery_timer <= 0.0:
+			set_state(BossState.CHASE)
 	else:
+		set_state(BossState.CHASE)
 		var direction: Vector2 = global_position.direction_to(arena.player.global_position)
 		var distance := global_position.distance_to(arena.player.global_position)
 		if distance > 105.0:
@@ -129,6 +163,7 @@ func _start_slash() -> void:
 	windup = 0.68
 	attack_timer = 3.0
 	_set_animation(&"attack")
+	set_state(BossState.WINDUP)
 	arena.telegraph_cone(global_position, pending_direction, 150.0, 1.72, windup)
 
 
@@ -138,6 +173,7 @@ func _start_charge() -> void:
 	windup = 0.72
 	attack_timer = 3.4
 	_set_animation(&"charge")
+	set_state(BossState.WINDUP)
 	arena.telegraph_line(global_position, pending_direction, 34.0, 520.0, windup)
 
 
@@ -147,6 +183,7 @@ func _start_volley() -> void:
 	windup = 0.7
 	attack_timer = 3.2
 	_set_animation(&"attack")
+	set_state(BossState.WINDUP)
 	arena.telegraph_cone(global_position, pending_direction, 230.0, 1.55, windup)
 
 
@@ -157,10 +194,12 @@ func _start_nova() -> void:
 	windup = 0.82
 	attack_timer = 4.2
 	_set_animation(&"attack")
+	set_state(BossState.WINDUP)
 	arena.telegraph_circle(global_position, 190.0, windup)
 
 
 func _resolve_pending_attack() -> void:
+	set_state(BossState.ATTACK)
 	match pending_attack:
 		&"slash":
 			arena.add_effect(EffectNode.create(&"slash", global_position, {"direction": pending_direction, "radius": 155.0, "arc": 1.72, "duration": 0.35, "color": Color("ffdbbe")}))
@@ -184,6 +223,31 @@ func _resolve_pending_attack() -> void:
 			arena.add_effect(EffectNode.create(&"pulse", global_position, {"radius": 190.0, "duration": 0.55, "color": Color("ff5b75")}))
 			arena.play_sfx(&"magic")
 	pending_attack = &""
+	if charge_time <= 0.0:
+		recovery_timer = 0.3
+		set_state(BossState.RECOVER)
+
+
+func _begin_phase_transition(text: String, color: Color) -> void:
+	charge_time = 0.0
+	windup = 0.0
+	pending_attack = &""
+	phase_transition_timer = 0.78
+	set_state(BossState.PHASE_TRANSITION)
+	arena.announce(text, color)
+	arena.telegraph_circle(global_position, 205.0, 0.62, color)
+	_phase_transition_burst()
+
+
+func _phase_transition_burst() -> void:
+	await get_tree().create_timer(0.62).timeout
+	if dead or not arena.run_active:
+		return
+	var count := 14 + phase * 3
+	for index in range(count):
+		arena.spawn_enemy_projectile(global_position, Vector2.from_angle(TAU * float(index) / float(count)), 8.0 + phase * 2.0, self, 250.0)
+	if phase >= 3:
+		arena.summon_minions(5)
 
 
 func take_damage(event: DamageEvent) -> void:
@@ -213,6 +277,7 @@ func apply_slow(multiplier: float, duration: float, _freeze: bool = false) -> vo
 
 func _die() -> void:
 	dead = true
+	set_state(BossState.DEAD)
 	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
@@ -226,6 +291,13 @@ func _die() -> void:
 	tween.tween_interval(0.45)
 	tween.tween_property(sprite, "modulate:a", 0.0, 0.5)
 	tween.tween_callback(func() -> void: defeated.emit(); queue_free())
+
+
+func set_state(new_state: BossState) -> void:
+	if state == new_state and not state_history.is_empty():
+		return
+	state = new_state
+	state_history.append(new_state)
 
 
 func _set_animation(name: StringName) -> void:

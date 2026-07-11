@@ -1,9 +1,19 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena_backdrop.gd" id="1_map"]
 [ext_resource type="Texture2D" path="res://assets/world/arena_background.png" id="2_background"]
 [ext_resource type="Texture2D" path="res://assets/world/Fog.png" id="3_fog"]
 [ext_resource type="Texture2D" path="res://assets/world/Raylight.png" id="4_ray"]
+[ext_resource type="Script" path="res://scripts/map_zone.gd" id="5_zone"]
+[ext_resource type="Script" path="res://scripts/zone_gate.gd" id="6_gate"]
+[ext_resource type="Script" path="res://scripts/hazard_area.gd" id="7_hazard"]
+
+[sub_resource type="RectangleShape2D" id="GateShapeForest"]
+size = Vector2(42, 260)
+[sub_resource type="RectangleShape2D" id="GateShapeLibrary"]
+size = Vector2(42, 260)
+[sub_resource type="RectangleShape2D" id="GateShapeSeal"]
+size = Vector2(300, 42)
 
 [sub_resource type="CircleShape2D" id="TreeShape01"]
 radius = 23.688
@@ -199,3 +209,113 @@ position = Vector2(1524, 190)
 scale = Vector2(7.5, 5)
 modulate = Color(0.42, 0.55, 0.68, 0.055)
 texture = ExtResource("3_fog")
+
+[node name="ZoneLayer" type="Node2D" parent="."]
+z_index = -1
+
+[node name="MountainGateZone" type="Node2D" parent="ZoneLayer"]
+position = Vector2(0, 360)
+script = ExtResource("5_zone")
+zone_id = &"mountain_gate"
+display_name = "山门"
+size = Vector2(900, 650)
+zone_color = Color(0.18, 0.27, 0.36, 0.12)
+unlocked = true
+
+[node name="WitheredForestZone" type="Node2D" parent="ZoneLayer"]
+position = Vector2(-940, 0)
+script = ExtResource("5_zone")
+zone_id = &"withered_forest"
+display_name = "枯林"
+size = Vector2(720, 1260)
+zone_color = Color(0.23, 0.31, 0.2, 0.13)
+
+[node name="SutraLibraryZone" type="Node2D" parent="ZoneLayer"]
+position = Vector2(940, 0)
+script = ExtResource("5_zone")
+zone_id = &"sutra_library"
+display_name = "经阁"
+size = Vector2(720, 1260)
+zone_color = Color(0.34, 0.24, 0.18, 0.13)
+
+[node name="SealHallZone" type="Node2D" parent="ZoneLayer"]
+position = Vector2(0, -470)
+script = ExtResource("5_zone")
+zone_id = &"seal_hall"
+display_name = "封印殿"
+size = Vector2(940, 560)
+zone_color = Color(0.31, 0.16, 0.26, 0.14)
+
+[node name="GateLayer" type="Node2D" parent="."]
+z_index = 20
+
+[node name="WitheredForestGate" type="StaticBody2D" parent="GateLayer"]
+position = Vector2(-560, 120)
+script = ExtResource("6_gate")
+gate_id = &"withered_forest_gate"
+unlock_wave = 2
+[node name="GateCollision" type="CollisionShape2D" parent="GateLayer/WitheredForestGate"]
+shape = SubResource("GateShapeForest")
+
+[node name="SutraLibraryGate" type="StaticBody2D" parent="GateLayer"]
+position = Vector2(560, 120)
+script = ExtResource("6_gate")
+gate_id = &"sutra_library_gate"
+unlock_wave = 4
+[node name="GateCollision" type="CollisionShape2D" parent="GateLayer/SutraLibraryGate"]
+shape = SubResource("GateShapeLibrary")
+
+[node name="SealHallGate" type="StaticBody2D" parent="GateLayer"]
+position = Vector2(0, -250)
+script = ExtResource("6_gate")
+gate_id = &"seal_hall_gate"
+unlock_wave = 7
+[node name="GateCollision" type="CollisionShape2D" parent="GateLayer/SealHallGate"]
+shape = SubResource("GateShapeSeal")
+
+[node name="HazardLayer" type="Node2D" parent="."]
+z_index = 55
+
+[node name="CurseLanterns" type="Node2D" parent="HazardLayer"]
+position = Vector2(880, 120)
+script = ExtResource("7_hazard")
+hazard_id = &"curse_lanterns"
+radius = 125.0
+damage = 10.0
+hazard_color = Color(0.88, 0.3, 0.22, 1)
+
+[node name="MistZone" type="Node2D" parent="HazardLayer"]
+position = Vector2(-940, -180)
+script = ExtResource("7_hazard")
+hazard_id = &"mist_zone"
+radius = 180.0
+damage = 7.0
+warning_duration = 0.9
+active_duration = 5.0
+hazard_color = Color(0.35, 0.55, 0.68, 1)
+
+[node name="MovingCurse" type="Node2D" parent="HazardLayer"]
+script = ExtResource("7_hazard")
+hazard_id = &"moving_curse"
+radius = 110.0
+damage = 13.0
+active_duration = 4.0
+hazard_color = Color(0.65, 0.22, 0.52, 1)
+
+[node name="SealPulse" type="Node2D" parent="HazardLayer"]
+script = ExtResource("7_hazard")
+hazard_id = &"seal_pulse"
+radius = 165.0
+damage = 15.0
+warning_duration = 0.8
+hazard_color = Color(0.7, 0.32, 0.2, 1)
+
+[node name="SealColumns" type="Node2D" parent="HazardLayer"]
+position = Vector2(0, -520)
+script = ExtResource("7_hazard")
+hazard_id = &"seal_columns"
+radius = 220.0
+damage = 17.0
+warning_duration = 1.0
+active_duration = 5.0
+hazard_color = Color(0.72, 0.18, 0.32, 1)

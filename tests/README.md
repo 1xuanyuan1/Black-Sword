@@ -28,6 +28,7 @@
 - `skill_inventory`：10+10 内容、6+6 槽位、候选过滤、五级心法属性聚合与双排 HUD。
 - `evolution_system`：十套配方、进阶条件、原槽替换、冷却继承、永久宝匣、三选一与单局三次上限。
 - `wave_director`：十二波顺序、Boss 死亡门控、三控制器装配、两种新敌人、精英词缀与三名小 Boss。
+- `map_and_boss`：四区与结界解锁、五类环境危险预警/伤害、鬼面剑豪显式状态机与 70%/35% 阶段转换。
 
 ## 编写约定
 
@@ -75,4 +76,10 @@
 
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-waves
+```
+
+地图/Boss 入口直接开放四区、同时激活五类危险并让鬼面剑豪入场：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-map-boss
 ```
