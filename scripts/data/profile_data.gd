@@ -2,6 +2,12 @@ class_name ProfileData
 extends RefCounted
 
 const CURRENT_SCHEMA_VERSION := 1
+const META_UPGRADE_MAX_LEVELS := {
+	"attack": 10,
+	"health": 10,
+	"insight": 5,
+	"revive": 3,
+}
 
 var schema_version := CURRENT_SCHEMA_VERSION
 var slot_index := 0
@@ -19,6 +25,7 @@ var unlocked_characters: Array[StringName] = [&"black_sword"]
 var available_character_unlocks: Array[StringName] = []
 var selected_character_id: StringName = &"black_sword"
 var story_flags: Array[StringName] = []
+var submitted_run_ids: Array[String] = []
 var stats: Dictionary = {
 	"runs": 0,
 	"victories": 0,
@@ -51,6 +58,7 @@ static func from_dict(data: Dictionary) -> ProfileData:
 	profile.available_character_unlocks = _string_name_array(data.get("available_character_unlocks", []))
 	profile.selected_character_id = StringName(data.get("selected_character_id", "black_sword"))
 	profile.story_flags = _string_name_array(data.get("story_flags", []))
+	profile.submitted_run_ids = _string_array_unique(data.get("submitted_run_ids", []))
 	profile.stats = _dictionary_with_defaults(data.get("stats", {}), profile.stats)
 	if &"black_sword" not in profile.unlocked_characters:
 		profile.unlocked_characters.push_front(&"black_sword")
@@ -70,6 +78,7 @@ func to_dict() -> Dictionary:
 		"available_character_unlocks": _string_array(available_character_unlocks),
 		"selected_character_id": String(selected_character_id),
 		"story_flags": _string_array(story_flags),
+		"submitted_run_ids": submitted_run_ids.duplicate(),
 		"stats": stats.duplicate(true),
 	}
 
@@ -96,4 +105,14 @@ static func _string_array(value: Array[StringName]) -> Array[String]:
 	var result: Array[String] = []
 	for item in value:
 		result.append(String(item))
+	return result
+
+
+static func _string_array_unique(value: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if value is Array:
+		for item in value:
+			var text := String(item).strip_edges()
+			if not text.is_empty() and text not in result:
+				result.append(text)
 	return result

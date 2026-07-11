@@ -310,6 +310,7 @@ user://saves/slot_3.bak
   "available_character_unlocks": [],
   "selected_character_id": "black_sword",
   "story_flags": [],
+  "submitted_run_ids": [],
   "stats": {
     "runs": 0,
     "victories": 0,
@@ -320,6 +321,8 @@ user://saves/slot_3.bak
   }
 }
 ```
+
+`submitted_run_ids` 记录已经成功结算的 `RunResult.run_id`。提交结算时先检查该集合，只有档案原子保存成功后才把结果标记为 `submitted`，从而同时阻止同一运行时对象和重新载入后的重复结算。
 
 加载校验：
 

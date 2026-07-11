@@ -22,6 +22,9 @@ func _run() -> void:
 		if suite_script == null:
 			context.fail("无法加载测试套件：%s" % suite_path)
 			continue
+		if not suite_script.can_instantiate():
+			context.fail("测试套件存在解析错误，无法实例化：%s" % suite_path)
+			continue
 		var suite: RefCounted = suite_script.new() as RefCounted
 		if suite == null or not suite.has_method("run"):
 			context.fail("测试套件缺少 run 方法：%s" % suite_path)

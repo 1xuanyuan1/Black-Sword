@@ -37,6 +37,8 @@ const ENEMY_SCENES: Dictionary = {
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
 var selected_character_id: StringName = &"black_sword"
+var run_config: RunConfig
+var last_run_result: RunResult
 var player: PlayerActor
 var enemies: Array = []
 var run_active := true
@@ -56,12 +58,17 @@ var rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	rng.randomize()
+	if run_config == null:
+		run_config = RunConfig.default_for_character(selected_character_id)
+	else:
+		selected_character_id = run_config.character_id
 	backdrop.setup(bounds)
 	var player_scene: PackedScene = PLAYER_SCENES.get(selected_character_id, PLAYER_SCENES[&"black_sword"]) as PackedScene
 	player = player_scene.instantiate() as PlayerActor
 	actor_layer.add_child(player)
 	player.global_position = player_spawn_point.global_position
 	player.setup(self)
+	player.apply_run_config(run_config)
 	player.health_changed.connect(func(current: float, maximum: float) -> void: player_health_changed.emit(current, maximum))
 	player.died.connect(_on_player_death)
 	skill_system.setup(self, player, registry.skills, player.initial_skill_id)
@@ -196,6 +203,7 @@ func _on_boss_defeated() -> void:
 	enemies.erase(boss)
 	kills += 1
 	run_active = false
+	last_run_result = _build_run_result(true)
 	announce("黑剑归鞘，荒寺复寂", Color("ffe6a6"))
 	play_sfx(&"victory")
 	await get_tree().create_timer(1.2).timeout
@@ -206,6 +214,7 @@ func _on_player_death() -> void:
 	if not run_active:
 		return
 	run_active = false
+	last_run_result = _build_run_result(false)
 	play_sfx(&"game_over")
 	await get_tree().create_timer(0.45).timeout
 	run_ended.emit(false, elapsed, player_level, kills)
@@ -214,7 +223,7 @@ func _on_player_death() -> void:
 func collect_xp(amount: int) -> void:
 	if not run_active:
 		return
-	current_xp += amount
+	current_xp += maxi(1, roundi(float(amount) * run_config.experience_multiplier))
 	var gained := 0
 	while current_xp >= required_xp:
 		current_xp -= required_xp
@@ -246,6 +255,38 @@ func choose_upgrade(id: StringName) -> void:
 	skill_system.upgrade(id)
 	player.heal(3.0)
 	complete_levelup()
+
+
+func finish_run_as_failure() -> void:
+	if not run_active:
+		return
+	run_active = false
+	last_run_result = _build_run_result(false)
+	run_ended.emit(false, elapsed, player_level, kills)
+
+
+func clear_nearby_for_revive(center: Vector2, radius: float = 180.0) -> void:
+	for enemy in enemies.duplicate():
+		if not is_instance_valid(enemy) or center.distance_to(enemy.global_position) > radius:
+			continue
+		if enemy.is_in_group("boss"):
+			enemy.knockback_velocity += center.direction_to(enemy.global_position) * 260.0
+			continue
+		enemies.erase(enemy)
+		enemy.queue_free()
+
+
+func _build_run_result(victory: bool) -> RunResult:
+	var result := RunResult.new()
+	result.ensure_run_id()
+	result.character_id = selected_character_id
+	result.victory = victory
+	result.elapsed_seconds = elapsed
+	result.completed_waves = 4 if victory else clampi(floori(elapsed / 90.0), 0, 4)
+	result.final_boss_kill = victory
+	result.kills = kills
+	result.player_level = player_level
+	return result
 
 
 func nearest_enemy(from_position: Vector2):

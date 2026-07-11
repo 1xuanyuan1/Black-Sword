@@ -84,9 +84,13 @@ func upgrade(id: StringName) -> void:
 
 func damage_multiplier() -> float:
 	var level: int = levels.get(&"tempered_edge", 0)
-	if level <= 0:
-		return 1.0
-	return 1.0 + float(definitions[&"tempered_edge"].stats(level).get("damage", 0.0))
+	var skill_multiplier := 1.0
+	if level > 0:
+		skill_multiplier += float(definitions[&"tempered_edge"].stats(level).get("damage", 0.0))
+	var meta_multiplier := 1.0
+	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
+		meta_multiplier = (arena.get("run_config") as RunConfig).attack_multiplier
+	return skill_multiplier * meta_multiplier
 
 
 func cooldown_multiplier() -> float:

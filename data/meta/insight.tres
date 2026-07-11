@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"insight"
+display_name = "悟性"
+description = "观照长夜，每级使经验获取提高 5%。"
+max_level = 5
+costs = PackedInt32Array(100, 200, 350, 550, 800)
+values = Array[Dictionary]([{"experience": 0.05}, {"experience": 0.10}, {"experience": 0.15}, {"experience": 0.20}, {"experience": 0.25}])

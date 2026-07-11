@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"attack"
+display_name = "攻击"
+description = "淬炼招式，每级使最终伤害提高 2%。"
+max_level = 10
+costs = PackedInt32Array(50, 75, 100, 150, 200, 275, 350, 450, 600, 800)
+values = Array[Dictionary]([{"damage": 0.02}, {"damage": 0.04}, {"damage": 0.06}, {"damage": 0.08}, {"damage": 0.10}, {"damage": 0.12}, {"damage": 0.14}, {"damage": 0.16}, {"damage": 0.18}, {"damage": 0.20}])

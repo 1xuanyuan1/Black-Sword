@@ -223,9 +223,13 @@ func _validate_profile(profile: ProfileData) -> PackedStringArray:
 		errors.append("默认角色 black_sword 必须解锁")
 	if profile.selected_character_id not in profile.unlocked_characters:
 		errors.append("当前选择角色尚未解锁")
-	for upgrade_id in ["attack", "health", "insight", "revive"]:
-		if int(profile.meta_upgrades.get(upgrade_id, 0)) < 0:
-			errors.append("养成等级不能为负数：%s" % upgrade_id)
+	for upgrade_id in profile.meta_upgrades:
+		if not ProfileData.META_UPGRADE_MAX_LEVELS.has(upgrade_id):
+			errors.append("未知的养成分支：%s" % upgrade_id)
+	for upgrade_id in ProfileData.META_UPGRADE_MAX_LEVELS:
+		var level := int(profile.meta_upgrades.get(upgrade_id, 0))
+		if level < 0 or level > int(ProfileData.META_UPGRADE_MAX_LEVELS[upgrade_id]):
+			errors.append("养成等级超出范围：%s" % upgrade_id)
 	return errors
 
 

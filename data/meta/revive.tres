@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MetaUpgradeDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/meta_upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"revive"
+display_name = "复生"
+description = "借守夜灯重聚形魂，每局只可生效一次。"
+max_level = 3
+costs = PackedInt32Array(800, 1400, 2200)
+values = Array[Dictionary]([{"health": 0.30, "invulnerability": 1.5}, {"health": 0.50, "invulnerability": 2.0}, {"health": 0.70, "invulnerability": 3.0}])

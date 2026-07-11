@@ -22,6 +22,7 @@
 - `baseline`：步骤 0 之前已有的完整 Demo 回归测试。
 - `content_database`：Resource 内容加载、ID、引用完整性、旧数值和 `ContentRegistry` 兼容层。
 - `save_manager`：三档隔离、原子保存、备份恢复、导入导出、GameState 与存档选择 UI。
+- `meta_progression`：夜烬公式、重复提交保护、四条局外养成、全额重置、RunConfig、一次复生与局外大厅 UI。
 
 ## 编写约定
 
@@ -30,3 +31,11 @@
 - 使用 `TestContext.check()` 记录断言，不自行结束测试进程。
 - 需要文件读写的测试只能使用 `user://tests/` 下的独立临时目录，并只清理自己创建的目录。
 - 每个开发步骤先运行对应套件，再运行完整回归测试；测试脚本在功能完成后继续保留。
+
+## 第 3 步人工验收入口
+
+以下入口仅在调试构建生效，存档写入 `user://tests/manual_meta_progression/`，不会碰玩家的 `user://saves/`：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-meta-progression
+```

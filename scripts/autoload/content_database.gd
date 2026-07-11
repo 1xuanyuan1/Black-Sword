@@ -4,16 +4,19 @@ const CHARACTER_DEFINITION_SCRIPT := preload("res://scripts/data/character_defin
 const SKILL_DEFINITION_SCRIPT := preload("res://scripts/data/skill_definition.gd")
 const ENEMY_DEFINITION_SCRIPT := preload("res://scripts/data/enemy_definition.gd")
 const WAVE_DEFINITION_SCRIPT := preload("res://scripts/data/wave_definition.gd")
+const META_UPGRADE_DEFINITION_SCRIPT := preload("res://scripts/data/meta_upgrade_definition.gd")
 
 const CHARACTER_DIRECTORY := "res://data/characters"
 const SKILL_DIRECTORY := "res://data/skills"
 const ENEMY_DIRECTORY := "res://data/enemies"
 const WAVE_DIRECTORY := "res://data/waves"
+const META_UPGRADE_DIRECTORY := "res://data/meta"
 
 var _characters: Dictionary = {}
 var _skills: Dictionary = {}
 var _enemies: Dictionary = {}
 var _waves: Array[WaveDefinition] = []
+var _meta_upgrades: Dictionary = {}
 var _load_errors := PackedStringArray()
 
 
@@ -28,11 +31,13 @@ func reload_content() -> void:
 	_skills.clear()
 	_enemies.clear()
 	_waves.clear()
+	_meta_upgrades.clear()
 	_load_errors.clear()
 	_load_indexed_resources(CHARACTER_DIRECTORY, CHARACTER_DEFINITION_SCRIPT, _characters)
 	_load_indexed_resources(SKILL_DIRECTORY, SKILL_DEFINITION_SCRIPT, _skills)
 	_load_indexed_resources(ENEMY_DIRECTORY, ENEMY_DEFINITION_SCRIPT, _enemies)
 	_load_waves()
+	_load_indexed_resources(META_UPGRADE_DIRECTORY, META_UPGRADE_DEFINITION_SCRIPT, _meta_upgrades)
 	_load_errors.append_array(_validate_references())
 
 
@@ -55,6 +60,10 @@ func wave(index: int) -> WaveDefinition:
 	return null
 
 
+func meta_upgrade(id: StringName) -> MetaUpgradeDefinition:
+	return _meta_upgrades.get(id) as MetaUpgradeDefinition
+
+
 func all_characters() -> Dictionary:
 	return _characters.duplicate()
 
@@ -71,6 +80,10 @@ func all_waves() -> Array[WaveDefinition]:
 	return _waves.duplicate()
 
 
+func all_meta_upgrades() -> Dictionary:
+	return _meta_upgrades.duplicate()
+
+
 func validate_all() -> PackedStringArray:
 	return _load_errors.duplicate()
 
@@ -81,13 +94,15 @@ func content_counts() -> Dictionary:
 		"skills": _skills.size(),
 		"enemies": _enemies.size(),
 		"waves": _waves.size(),
+		"meta_upgrades": _meta_upgrades.size(),
 	}
 
 
 func _load_indexed_resources(directory: String, expected_script: Script, target: Dictionary) -> void:
 	var files := DirAccess.get_files_at(directory)
 	files.sort()
-	for file_name in files:
+	for raw_file_name in files:
+		var file_name := raw_file_name.trim_suffix(".remap") if raw_file_name.ends_with(".remap") else raw_file_name
 		if not file_name.ends_with(".tres"):
 			continue
 		var path := directory.path_join(file_name)
@@ -112,7 +127,8 @@ func _load_waves() -> void:
 	var files := DirAccess.get_files_at(WAVE_DIRECTORY)
 	files.sort()
 	var indices := {}
-	for file_name in files:
+	for raw_file_name in files:
+		var file_name := raw_file_name.trim_suffix(".remap") if raw_file_name.ends_with(".remap") else raw_file_name
 		if not file_name.ends_with(".tres"):
 			continue
 		var path := WAVE_DIRECTORY.path_join(file_name)
@@ -164,4 +180,16 @@ func _validate_references() -> PackedStringArray:
 			total_weight += float(definition.enemy_weights[enemy_id])
 		if not is_equal_approx(total_weight, 1.0):
 			errors.append("波次 %d 的敌人权重总和不是 1" % definition.index)
+	for definition in _meta_upgrades.values():
+		var meta_definition := definition as MetaUpgradeDefinition
+		if meta_definition.max_level <= 0:
+			errors.append("局外养成 %s 的等级上限无效" % meta_definition.id)
+		if meta_definition.costs.size() != meta_definition.max_level:
+			errors.append("局外养成 %s 的费用数量与等级上限不一致" % meta_definition.id)
+		if meta_definition.values.size() != meta_definition.max_level:
+			errors.append("局外养成 %s 的效果数量与等级上限不一致" % meta_definition.id)
+		for cost in meta_definition.costs:
+			if cost <= 0:
+				errors.append("局外养成 %s 包含无效费用" % meta_definition.id)
+				break
 	return errors

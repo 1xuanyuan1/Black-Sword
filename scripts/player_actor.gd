@@ -3,6 +3,7 @@ extends CharacterBody2D
 
 signal health_changed(current: float, maximum: float)
 signal died
+signal revived(rank: int)
 
 const LEGACY_HERO_TEXTURE := preload("res://assets/actors/hero/samurai_blue.png")
 
@@ -28,6 +29,8 @@ var dead := false
 var last_direction := Vector2.DOWN
 var knockback_velocity := Vector2.ZERO
 var virtual_move_input := Vector2.ZERO
+var revive_rank := 0
+var revive_used := false
 
 
 func setup(new_arena: Node) -> void:
@@ -42,6 +45,16 @@ func setup(new_arena: Node) -> void:
 	follow_camera.limit_right = int(arena.bounds.end.x)
 	follow_camera.limit_bottom = int(arena.bounds.end.y)
 	visual.death_animation_finished.connect(func() -> void: died.emit())
+	health_changed.emit(health, max_health)
+
+
+func apply_run_config(config: RunConfig) -> void:
+	if config == null:
+		return
+	max_health = 100.0 * config.health_multiplier
+	health = max_health
+	revive_rank = clampi(config.revive_rank, 0, 3)
+	revive_used = false
 	health_changed.emit(health, max_health)
 
 
@@ -80,9 +93,27 @@ func take_damage(event: DamageEvent) -> void:
 	arena.show_damage(global_position + Vector2(0, -36), event.amount, Color("ff8888"))
 	health_changed.emit(health, max_health)
 	if health <= 0.0:
+		if _try_revive():
+			return
 		dead = true
 		velocity = Vector2.ZERO
 		visual.play_death()
+
+
+func _try_revive() -> bool:
+	if revive_rank <= 0 or revive_used:
+		return false
+	const HEALTH_RATIOS := [0.0, 0.30, 0.50, 0.70]
+	const INVULNERABILITY_SECONDS := [0.0, 1.5, 2.0, 3.0]
+	revive_used = true
+	health = max_health * HEALTH_RATIOS[revive_rank]
+	invulnerability = INVULNERABILITY_SECONDS[revive_rank]
+	knockback_velocity = Vector2.ZERO
+	if is_instance_valid(arena) and arena.has_method("clear_nearby_for_revive"):
+		arena.clear_nearby_for_revive(global_position, 180.0)
+	health_changed.emit(health, max_health)
+	revived.emit(revive_rank)
+	return true
 
 
 func heal(amount: float) -> void:

@@ -48,8 +48,10 @@ var pause_open := false
 var game_running := false
 var character_select_open := false
 var save_select_open := false
+var hub_open := false
 var selected_character_id: StringName = &"black_sword"
 var orientation_pause_active := false
+var current_run_result: RunResult
 
 
 func _ready() -> void:
@@ -69,7 +71,7 @@ func _ready() -> void:
 	ui_root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(music_player)
 	music_player.bus = &"Music"
-	music_player.finished.connect(func() -> void: if music_player.stream != null: music_player.play())
+	music_player.finished.connect(_on_music_finished)
 	for i in range(10):
 		var player := AudioStreamPlayer.new()
 		player.name = "SfxVoice%02d" % (i + 1)
@@ -100,6 +102,8 @@ func _handle_qa_args() -> void:
 		call_deferred("_show_character_selection")
 	elif "--qa-save-select" in OS.get_cmdline_user_args():
 		call_deferred("_show_save_selection")
+	elif "--qa-meta-progression" in OS.get_cmdline_user_args():
+		call_deferred("_qa_show_meta_progression")
 
 
 func _process(_delta: float) -> void:
@@ -123,9 +127,16 @@ func _process(_delta: float) -> void:
 
 func _exit_tree() -> void:
 	music_player.stop()
+	music_player.stream = null
 	for player in sfx_players:
 		if is_instance_valid(player):
 			player.stop()
+			player.stream = null
+
+
+func _on_music_finished() -> void:
+	if music_player.stream != null:
+		music_player.play()
 
 
 func _qa_trigger_levelup() -> void:
@@ -151,6 +162,20 @@ func _qa_enable_orbit() -> void:
 			arena.skill_system.upgrade(&"orbit_blades")
 
 
+func _qa_show_meta_progression() -> void:
+	if not OS.is_debug_build():
+		return
+	SaveManager.configure_storage_root_for_tests("user://tests/manual_meta_progression")
+	var summaries: Array[SaveSlotSummary] = SaveManager.list_slots()
+	var profile: ProfileData = GameState.load_profile(1) if summaries[0].exists else GameState.create_profile(1)
+	if profile == null:
+		return
+	profile.night_embers = maxi(profile.night_embers, 5000)
+	GameState.save_current(&"qa_meta_seed")
+	selected_character_id = profile.selected_character_id
+	_show_meta_progression("QA 验收档：已提供 5000 测试夜烬，不影响正式存档")
+
+
 func _input(event: InputEvent) -> void:
 	if save_select_open:
 		if event.is_action_pressed("pause"):
@@ -162,7 +187,13 @@ func _input(event: InputEvent) -> void:
 		elif event.is_action_pressed("choose_2"):
 			_select_character(&"minato")
 		elif event.is_action_pressed("pause"):
-			_show_title()
+			if GameState.has_current_profile():
+				_show_hub()
+			else:
+				_show_title()
+		return
+	if hub_open and event.is_action_pressed("pause"):
+		_show_save_selection()
 		return
 	if leveling:
 		if event.is_action_pressed("choose_1"):
@@ -227,6 +258,7 @@ func _show_title() -> void:
 	orientation_pause_active = false
 	character_select_open = false
 	save_select_open = false
+	hub_open = false
 	leveling = false
 	pause_open = false
 	get_tree().paused = false
@@ -301,6 +333,7 @@ func _show_title() -> void:
 func _show_save_selection(notice: String = "") -> void:
 	game_running = false
 	save_select_open = true
+	hub_open = false
 	character_select_open = false
 	leveling = false
 	pause_open = false
@@ -408,7 +441,7 @@ func _create_or_load_slot(slot_index: int) -> void:
 		return
 	selected_character_id = profile.selected_character_id
 	var recovery_notice: String = SaveManager.last_recovery_message
-	_show_character_selection()
+	_show_hub()
 	if not recovery_notice.is_empty():
 		var recovery_label := _label(recovery_notice, 17, Color("ffd38a"))
 		recovery_label.name = "RecoveryNoticeLabel"
@@ -416,6 +449,244 @@ func _create_or_load_slot(slot_index: int) -> void:
 		recovery_label.size = Vector2(1080, 28)
 		recovery_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		ui_root.add_child(recovery_label)
+
+
+func _show_hub(notice: String = "") -> void:
+	game_running = false
+	save_select_open = false
+	character_select_open = false
+	hub_open = true
+	leveling = false
+	pause_open = false
+	get_tree().paused = false
+	_clear_world()
+	_clear_ui()
+	var profile: ProfileData = GameState.current_profile
+	if profile == null:
+		_show_save_selection("请先选择一盏守夜灯")
+		return
+	var background := ColorRect.new()
+	background.name = "HubBackground"
+	background.color = Color("080f1b")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_root.add_child(background)
+	var title := _label("守夜庭 · 灯火未熄", 42, Color("f2ead7"))
+	title.position = Vector2(0, 30)
+	title.size = Vector2(1280, 58)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(title)
+	var profile_text := _label("守夜灯 %d    夜烬  %d" % [profile.slot_index, profile.night_embers], 25, Color("ffd38a"))
+	profile_text.name = "HubNightEmbersLabel"
+	profile_text.position = Vector2(0, 92)
+	profile_text.size = Vector2(1280, 38)
+	profile_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(profile_text)
+	var notice_label := _label(notice, 17, Color("9fd7b0"))
+	notice_label.name = "HubNoticeLabel"
+	notice_label.position = Vector2(100, 132)
+	notice_label.size = Vector2(1080, 28)
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(notice_label)
+	var levels := profile.meta_upgrades
+	var progression := _label(
+		"局外养成  攻击 %d/10 · 生命 %d/10 · 悟性 %d/5 · 复生 %d/3" % [
+			int(levels.get("attack", 0)), int(levels.get("health", 0)),
+			int(levels.get("insight", 0)), int(levels.get("revive", 0)),
+		],
+		20,
+		Color("b9c8dc")
+	)
+	progression.name = "HubProgressionSummary"
+	progression.position = Vector2(0, 188)
+	progression.size = Vector2(1280, 36)
+	progression.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(progression)
+	var panel := PanelContainer.new()
+	panel.position = Vector2(390, 248)
+	panel.size = Vector2(500, 300)
+	panel.theme = game_theme
+	background.add_child(panel)
+	var actions := VBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 16)
+	panel.add_child(actions)
+	var challenge := _button("开始挑战", Vector2(360, 62))
+	challenge.name = "StartChallengeButton"
+	challenge.pressed.connect(_show_character_selection)
+	actions.add_child(challenge)
+	var progression_button := _button("夜烬养成", Vector2(360, 58))
+	progression_button.name = "OpenMetaProgressionButton"
+	progression_button.pressed.connect(_show_meta_progression)
+	actions.add_child(progression_button)
+	var switch_slot := _button("切换守夜灯", Vector2(360, 54))
+	switch_slot.name = "SwitchSaveSlotButton"
+	switch_slot.pressed.connect(_show_save_selection)
+	actions.add_child(switch_slot)
+	var back := _button("返回标题", Vector2(260, 46))
+	back.name = "HubBackToTitleButton"
+	back.position = Vector2(510, 625)
+	back.pressed.connect(func() -> void: GameState.save_current(&"return_to_title"); _show_title())
+	background.add_child(back)
+
+
+func _show_meta_progression(notice: String = "") -> void:
+	if not GameState.has_current_profile():
+		_show_save_selection("请先选择存档")
+		return
+	game_running = false
+	hub_open = false
+	character_select_open = false
+	get_tree().paused = false
+	_clear_world()
+	_clear_ui()
+	var background := ColorRect.new()
+	background.name = "MetaProgressionBackground"
+	background.color = Color("080f1b")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_root.add_child(background)
+	var title := _label("夜烬养成", 42, Color("f2ead7"))
+	title.position = Vector2(0, 24)
+	title.size = Vector2(1280, 58)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(title)
+	var currency := _label("持有夜烬  %d" % GameState.current_profile.night_embers, 24, Color("ffd38a"))
+	currency.name = "MetaNightEmbersLabel"
+	currency.position = Vector2(0, 80)
+	currency.size = Vector2(1280, 36)
+	currency.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(currency)
+	var notice_label := _label(notice, 17, Color("9fd7b0") if not notice.contains("不足") else Color("ff9b9b"))
+	notice_label.name = "MetaNoticeLabel"
+	notice_label.position = Vector2(100, 116)
+	notice_label.size = Vector2(1080, 26)
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(notice_label)
+	var cards := HBoxContainer.new()
+	cards.name = "MetaUpgradeCards"
+	cards.position = Vector2(42, 168)
+	cards.size = Vector2(1196, 360)
+	cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards.add_theme_constant_override("separation", 18)
+	background.add_child(cards)
+	for id in [&"attack", &"health", &"insight", &"revive"]:
+		cards.add_child(_meta_upgrade_card(ContentDatabase.meta_upgrade(id)))
+	var reset := _button("免费重置并返还 %d 夜烬" % GameState.meta_investment_total(), Vector2(330, 48))
+	reset.name = "ResetMetaUpgradesButton"
+	reset.position = Vector2(285, 600)
+	reset.pressed.connect(_request_meta_reset)
+	background.add_child(reset)
+	var back := _button("返回守夜庭", Vector2(280, 48))
+	back.name = "BackToHubButton"
+	back.position = Vector2(665, 600)
+	back.pressed.connect(_show_hub)
+	background.add_child(back)
+
+
+func _meta_upgrade_card(definition: MetaUpgradeDefinition) -> Control:
+	if definition == null:
+		var missing := PanelContainer.new()
+		missing.custom_minimum_size = Vector2(275, 340)
+		missing.add_child(_label("养成数据缺失", 18, Color("ff9b9b")))
+		return missing
+	var panel := PanelContainer.new()
+	panel.name = "MetaUpgradeCard_" + String(definition.id)
+	panel.custom_minimum_size = Vector2(275, 340)
+	panel.theme = game_theme
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 13)
+	panel.add_child(column)
+	var level := int(GameState.current_profile.meta_upgrades.get(String(definition.id), 0))
+	var title := _label(definition.display_name, 29, Color("f2ead7"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(title)
+	var level_label := _label(str(level) + " / " + str(definition.max_level) + " 级", 21, Color("9fc5ef"))
+	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(level_label)
+	var description := _label(definition.description, 16, Color("b9c8dc"))
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	description.custom_minimum_size = Vector2(235, 92)
+	column.add_child(description)
+	var effect_panel := PanelContainer.new()
+	effect_panel.name = "MetaCurrentEffectPanel_" + String(definition.id)
+	effect_panel.custom_minimum_size = Vector2(235, 76)
+	effect_panel.add_theme_stylebox_override("panel", _style_box(Color("0b1726"), Color("365778"), 1, 8, 7))
+	column.add_child(effect_panel)
+	var effect := RichTextLabel.new()
+	effect.name = "MetaCurrentEffect_" + String(definition.id)
+	effect.theme = game_theme
+	effect.bbcode_enabled = true
+	effect.fit_content = true
+	effect.scroll_active = false
+	effect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	effect.custom_minimum_size = Vector2(220, 60)
+	effect.text = _meta_effect_bbcode(definition, level)
+	effect_panel.add_child(effect)
+	var cost := definition.cost_for_next_level(level)
+	var purchase := _button("已满级" if cost < 0 else "提升 · " + str(cost) + " 夜烬", Vector2(230, 50))
+	purchase.name = "PurchaseMeta_" + String(definition.id)
+	purchase.disabled = cost < 0
+	purchase.pressed.connect(_purchase_meta_upgrade.bind(definition.id))
+	column.add_child(purchase)
+	return panel
+
+
+func _meta_effect_bbcode(definition: MetaUpgradeDefinition, level: int) -> String:
+	if level <= 0:
+		return "[center][color=#8b9bb1]当前效果[/color]\n[color=#66778e]尚未修习[/color][/center]"
+	var stats := definition.stats(level)
+	match definition.id:
+		&"attack":
+			return _meta_stat_bbcode("最终伤害", "+" + str(roundi(float(stats.get("damage", 0.0)) * 100.0)) + "%")
+		&"health":
+			return _meta_stat_bbcode("最大生命", "+" + str(roundi(float(stats.get("health", 0.0)) * 100.0)) + "%")
+		&"insight":
+			return _meta_stat_bbcode("经验获取", "+" + str(roundi(float(stats.get("experience", 0.0)) * 100.0)) + "%")
+		&"revive":
+			var health_value := str(roundi(float(stats.get("health", 0.0)) * 100.0)) + "%"
+			var invulnerability_value := str(float(stats.get("invulnerability", 0.0))) + " 秒"
+			return "[center][color=#9fb2cc][font_size=14]当前效果 · 每局一次复生[/font_size][/color]\n[color=#d7e2ef]恢复[/color] [color=#72e6a5][font_size=22]" + health_value + "[/font_size][/color] [color=#d7e2ef]生命  ·  无敌[/color] [color=#78d8ff][font_size=22]" + invulnerability_value + "[/font_size][/color][/center]"
+	return "[center][color=#9fb2cc]当前等级[/color] [color=#72e6a5][font_size=22]" + str(level) + "[/font_size][/color][/center]"
+
+
+func _meta_stat_bbcode(stat_name: String, value_text: String) -> String:
+	return "[center][color=#9fb2cc][font_size=14]当前效果[/font_size][/color]\n[color=#d7e2ef][font_size=17]" + stat_name + "[/font_size][/color]  [color=#72e6a5][font_size=24][b]" + value_text + "[/b][/font_size][/color][/center]"
+
+
+func _purchase_meta_upgrade(id: StringName) -> void:
+	var error := GameState.purchase_meta_upgrade(id)
+	var notice := "养成已提升"
+	if error == ERR_UNAVAILABLE:
+		notice = "夜烬不足"
+	elif error == ERR_CANT_ACQUIRE_RESOURCE:
+		notice = "此分支已满级"
+	elif error != OK:
+		notice = "保存失败：%s" % error_string(error)
+	_show_meta_progression(notice)
+
+
+func _request_meta_reset() -> void:
+	var refund := GameState.meta_investment_total()
+	if refund <= 0:
+		_show_meta_progression("当前没有可重置的养成")
+		return
+	var dialog := ConfirmationDialog.new()
+	dialog.name = "ResetMetaConfirmation"
+	dialog.title = "重置夜烬养成"
+	dialog.dialog_text = "将全部养成重置为 0 级，并返还 %d 夜烬。" % refund
+	dialog.ok_button_text = "确认重置"
+	dialog.cancel_button_text = "取消"
+	dialog.confirmed.connect(func() -> void:
+		var error := GameState.reset_meta_upgrades()
+		_show_meta_progression("已返还 %d 夜烬" % refund if error == OK else "重置失败：%s" % error_string(error))
+	)
+	background_add_dialog(dialog)
+
+
+func background_add_dialog(dialog: Window) -> void:
+	ui_root.add_child(dialog)
+	dialog.popup_centered(Vector2i(540, 240))
 
 
 func _request_delete_slot(slot_index: int) -> void:
@@ -487,6 +758,7 @@ func _format_play_time(total_seconds: int) -> String:
 func _show_character_selection() -> void:
 	game_running = false
 	save_select_open = false
+	hub_open = false
 	character_select_open = true
 	leveling = false
 	pause_open = false
@@ -534,14 +806,14 @@ func _show_character_selection() -> void:
 		_minato_portrait_texture(),
 		Color("64d4ff")
 	))
-	var back := _button("返回标题", Vector2(240, 48))
+	var back := _button("返回守夜庭" if GameState.has_current_profile() else "返回标题", Vector2(240, 48))
 	back.name = "BackToTitleButton"
 	back.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	back.offset_left = -120
 	back.offset_top = -84
 	back.offset_right = 120
 	back.offset_bottom = -36
-	back.pressed.connect(_show_save_selection)
+	back.pressed.connect(_show_hub if GameState.has_current_profile() else _show_title)
 	background.add_child(back)
 
 
@@ -626,12 +898,15 @@ func _start_game() -> void:
 	get_tree().paused = false
 	save_select_open = false
 	character_select_open = false
+	hub_open = false
 	_clear_world()
 	_clear_ui()
 	game_running = true
 	orientation_pause_active = false
 	arena = BATTLE_ARENA_SCENE.instantiate() as Arena
 	arena.selected_character_id = selected_character_id
+	arena.run_config = GameState.build_run_config(selected_character_id)
+	current_run_result = null
 	world_holder.add_child(arena)
 	_connect_arena()
 	_build_hud()
@@ -979,9 +1254,16 @@ func _toggle_pause() -> void:
 	var restart := _button("重新开始", Vector2(300, 55))
 	restart.pressed.connect(func() -> void: pause_open = false; get_tree().paused = false; _start_game())
 	box.add_child(restart)
-	var title_button := _button("返回标题", Vector2(300, 55))
-	title_button.pressed.connect(_show_title)
+	var title_button := _button("结束本局并结算", Vector2(300, 55))
+	title_button.pressed.connect(_end_run_from_pause)
 	box.add_child(title_button)
+
+
+func _end_run_from_pause() -> void:
+	pause_open = false
+	get_tree().paused = false
+	if is_instance_valid(arena):
+		arena.finish_run_as_failure()
 
 
 func _show_boss(_boss: BossActor) -> void:
@@ -1016,6 +1298,19 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	_release_virtual_movement()
 	_set_touch_movement_enabled(false)
 	get_tree().paused = true
+	current_run_result = arena.last_run_result if is_instance_valid(arena) else null
+	if current_run_result == null:
+		current_run_result = RunResult.new()
+		current_run_result.character_id = selected_character_id
+		current_run_result.victory = victory
+		current_run_result.elapsed_seconds = elapsed
+		current_run_result.completed_waves = 4 if victory else clampi(floori(elapsed / 90.0), 0, 4)
+		current_run_result.final_boss_kill = victory
+		current_run_result.kills = kills
+		current_run_result.player_level = level
+	var submit_error := OK
+	if GameState.has_current_profile():
+		submit_error = GameState.submit_run_result(current_run_result)
 	modal_overlay = _modal_background()
 	ui_root.add_child(modal_overlay)
 	var panel := PanelContainer.new()
@@ -1037,7 +1332,12 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	box.add_child(title)
 	var minutes := int(elapsed) / 60
 	var seconds := int(elapsed) % 60
-	var result_text := "存活时间  %02d:%02d\n最终境界  %d\n斩敌数量  %d" % [minutes, seconds, level, kills]
+	var ember_text := ""
+	if GameState.has_current_profile() and submit_error == OK:
+		ember_text = "\n带回夜烬  %d · 当前持有 %d" % [current_run_result.earned_night_embers, GameState.current_profile.night_embers]
+	elif GameState.has_current_profile():
+		ember_text = "\n结算保存失败：%s" % error_string(submit_error)
+	var result_text := "存活时间  %02d:%02d\n最终境界  %d\n斩敌数量  %d%s" % [minutes, seconds, level, kills, ember_text]
 	var stats := _label(result_text, 24, Color("c8d4e4"))
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats.add_theme_constant_override("line_spacing", 10)
@@ -1045,8 +1345,8 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	var retry := _button("再入荒寺", Vector2(320, 58))
 	retry.pressed.connect(func() -> void: get_tree().paused = false; _start_game())
 	box.add_child(retry)
-	var back := _button("返回标题", Vector2(320, 54))
-	back.pressed.connect(_show_title)
+	var back := _button("返回守夜庭" if GameState.has_current_profile() else "返回标题", Vector2(320, 54))
+	back.pressed.connect(_show_hub if GameState.has_current_profile() else _show_title)
 	box.add_child(back)
 
 

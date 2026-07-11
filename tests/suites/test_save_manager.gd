@@ -96,7 +96,8 @@ func _test_save_selection_ui(tree: SceneTree, context: RefCounted) -> void:
 	context.check(main.ui_root.find_child("CreateSlot2Button", true, false) != null, "空档位显示创建按钮")
 	main._create_or_load_slot(2)
 	await tree.process_frame
-	context.check(GameState.current_slot_index() == 2 and main.character_select_open, "创建空档后进入角色选择并记录当前档位")
+	context.check(GameState.current_slot_index() == 2 and main.hub_open, "创建空档后进入局外大厅并记录当前档位")
+	context.check(main.ui_root.find_child("HubNightEmbersLabel", true, false) != null, "局外大厅显示当前档位夜烬")
 	main._show_save_selection()
 	await tree.process_frame
 	main._delete_slot_immediately(2)
