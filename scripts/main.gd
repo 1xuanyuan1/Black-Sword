@@ -47,6 +47,7 @@ var leveling := false
 var pause_open := false
 var game_running := false
 var character_select_open := false
+var save_select_open := false
 var selected_character_id: StringName = &"black_sword"
 var orientation_pause_active := false
 
@@ -76,6 +77,11 @@ func _ready() -> void:
 		add_child(player)
 		sfx_players.append(player)
 	_show_title()
+	if OS.is_debug_build():
+		_handle_qa_args()
+
+
+func _handle_qa_args() -> void:
 	if "--qa-battle" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 	elif "--qa-orbit" in OS.get_cmdline_user_args():
@@ -92,6 +98,8 @@ func _ready() -> void:
 		call_deferred("_start_game")
 	elif "--qa-character-select" in OS.get_cmdline_user_args():
 		call_deferred("_show_character_selection")
+	elif "--qa-save-select" in OS.get_cmdline_user_args():
+		call_deferred("_show_save_selection")
 
 
 func _process(_delta: float) -> void:
@@ -144,6 +152,10 @@ func _qa_enable_orbit() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if save_select_open:
+		if event.is_action_pressed("pause"):
+			_show_title()
+		return
 	if character_select_open:
 		if event.is_action_pressed("choose_1"):
 			_select_character(&"black_sword")
@@ -214,6 +226,7 @@ func _show_title() -> void:
 	game_running = false
 	orientation_pause_active = false
 	character_select_open = false
+	save_select_open = false
 	leveling = false
 	pause_open = false
 	get_tree().paused = false
@@ -261,8 +274,9 @@ func _show_title() -> void:
 	var subtitle := _label("风过荒寺，百鬼夜行。唯有一剑，可破黎明。", 24, Color("b9c6d8"))
 	content.add_child(subtitle)
 	content.add_child(_spacer(26))
-	var start := _button("选择角色", Vector2(310, 58))
-	start.pressed.connect(func() -> void: _play_sfx(&"ui"); _show_character_selection())
+	var start := _button("选择存档", Vector2(310, 58))
+	start.name = "OpenSaveSelectionButton"
+	start.pressed.connect(func() -> void: _play_sfx(&"ui"); _show_save_selection())
 	content.add_child(start)
 	var help := _button("玩法说明", Vector2(310, 54))
 	content.add_child(help)
@@ -284,8 +298,195 @@ func _show_title() -> void:
 	content.add_child(credits)
 
 
+func _show_save_selection(notice: String = "") -> void:
+	game_running = false
+	save_select_open = true
+	character_select_open = false
+	leveling = false
+	pause_open = false
+	get_tree().paused = false
+	_clear_world()
+	_clear_ui()
+	var background := ColorRect.new()
+	background.name = "SaveSelectionBackground"
+	background.color = Color("080f1b")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_root.add_child(background)
+	var header := _label("三盏守夜灯", 42, Color("f2ead7"))
+	header.position = Vector2(0, 28)
+	header.size = Vector2(1280, 58)
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(header)
+	var hint := _label("每盏灯保存独立的角色、养成与故事进度", 18, Color("9fb2cc"))
+	hint.position = Vector2(0, 82)
+	hint.size = Vector2(1280, 32)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(hint)
+	var notice_label := _label(notice, 17, Color("ffd38a"))
+	notice_label.name = "SaveNoticeLabel"
+	notice_label.position = Vector2(100, 116)
+	notice_label.size = Vector2(1080, 28)
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(notice_label)
+	var cards := HBoxContainer.new()
+	cards.name = "SaveSlotCards"
+	cards.position = Vector2(70, 158)
+	cards.size = Vector2(1140, 430)
+	cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards.add_theme_constant_override("separation", 24)
+	background.add_child(cards)
+	for summary in SaveManager.list_slots():
+		cards.add_child(_save_slot_card(summary))
+	var back := _button("返回标题", Vector2(240, 48))
+	back.name = "BackToTitleButton"
+	back.position = Vector2(520, 632)
+	back.pressed.connect(_show_title)
+	background.add_child(back)
+
+
+func _save_slot_card(summary: SaveSlotSummary) -> Control:
+	var panel := PanelContainer.new()
+	panel.name = "SaveSlotCard%d" % summary.slot_index
+	panel.custom_minimum_size = Vector2(350, 410)
+	panel.theme = game_theme
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 12)
+	panel.add_child(column)
+	var current_marker := " · 当前" if GameState.current_slot_index() == summary.slot_index else ""
+	var title := _label("守夜灯 %d%s" % [summary.slot_index, current_marker], 28, Color("f2ead7"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(title)
+	if not summary.exists:
+		var empty_text := _label("未点燃\n此档位尚无记录", 19, Color("8392a8"))
+		empty_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_text.custom_minimum_size.y = 130
+		column.add_child(empty_text)
+		var create_button := _button("点燃此灯", Vector2(270, 52))
+		create_button.name = "CreateSlot%dButton" % summary.slot_index
+		create_button.pressed.connect(_create_or_load_slot.bind(summary.slot_index))
+		column.add_child(create_button)
+	else:
+		var status_text := "记录损坏"
+		if summary.recoverable:
+			status_text = "可从上一次完整记录恢复"
+		elif not summary.corrupt:
+			var updated := Time.get_datetime_string_from_unix_time(summary.updated_at_unix, true).replace("T", " ")
+			status_text = "上次记录  %s\n游玩时间  %s\n挑战 %d 次 · 胜利 %d 次" % [updated, _format_play_time(summary.play_seconds), summary.runs, summary.victories]
+		var status := _label(status_text, 17, Color("ff9b9b") if summary.corrupt else Color("b9c8dc"))
+		status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		status.custom_minimum_size = Vector2(300, 130)
+		column.add_child(status)
+		if not summary.corrupt or summary.recoverable:
+			var load_button := _button("恢复并进入" if summary.recoverable else "进入此档", Vector2(270, 50))
+			load_button.name = "LoadSlot%dButton" % summary.slot_index
+			load_button.pressed.connect(_create_or_load_slot.bind(summary.slot_index))
+			column.add_child(load_button)
+		var export_button := _button("导出灯火", Vector2(270, 44))
+		export_button.name = "ExportSlot%dButton" % summary.slot_index
+		export_button.disabled = summary.corrupt and not summary.recoverable
+		export_button.pressed.connect(_export_slot.bind(summary.slot_index))
+		column.add_child(export_button)
+		var delete_button := _button("熄灭此灯", Vector2(270, 42))
+		delete_button.name = "DeleteSlot%dButton" % summary.slot_index
+		delete_button.pressed.connect(_request_delete_slot.bind(summary.slot_index))
+		column.add_child(delete_button)
+	var import_button := _button("导入灯火", Vector2(270, 42))
+	import_button.name = "ImportSlot%dButton" % summary.slot_index
+	import_button.pressed.connect(_import_slot.bind(summary.slot_index))
+	column.add_child(import_button)
+	return panel
+
+
+func _create_or_load_slot(slot_index: int) -> void:
+	var summaries: Array[SaveSlotSummary] = SaveManager.list_slots()
+	var summary := summaries[slot_index - 1]
+	var profile: ProfileData = GameState.load_profile(slot_index) if summary.exists else GameState.create_profile(slot_index)
+	if profile == null:
+		_show_save_selection(SaveManager.last_error_message)
+		return
+	selected_character_id = profile.selected_character_id
+	var recovery_notice: String = SaveManager.last_recovery_message
+	_show_character_selection()
+	if not recovery_notice.is_empty():
+		var recovery_label := _label(recovery_notice, 17, Color("ffd38a"))
+		recovery_label.name = "RecoveryNoticeLabel"
+		recovery_label.position = Vector2(100, 126)
+		recovery_label.size = Vector2(1080, 28)
+		recovery_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ui_root.add_child(recovery_label)
+
+
+func _request_delete_slot(slot_index: int) -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.name = "DeleteSlot%dConfirmation" % slot_index
+	dialog.title = "熄灭守夜灯"
+	dialog.dialog_text = "此操作会永久删除存档 %d 的全部记录，且无法撤销。" % slot_index
+	dialog.ok_button_text = "确认删除"
+	dialog.cancel_button_text = "取消"
+	dialog.confirmed.connect(func() -> void: _delete_slot_immediately(slot_index))
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.confirmed.connect(dialog.queue_free)
+	ui_root.add_child(dialog)
+	dialog.popup_centered(Vector2i(520, 220))
+
+
+func _delete_slot_immediately(slot_index: int) -> void:
+	var error := GameState.delete_profile(slot_index)
+	_show_save_selection("存档 %d 已删除" % slot_index if error == OK else SaveManager.last_error_message)
+
+
+func _export_slot(slot_index: int) -> void:
+	var file_name := "black_sword_slot_%d_%d.json" % [slot_index, int(Time.get_unix_time_from_system())]
+	if OS.has_feature("web"):
+		var json_text: String = SaveManager.export_slot_json(slot_index)
+		if json_text.is_empty():
+			_show_save_selection(SaveManager.last_error_message)
+			return
+		JavaScriptBridge.download_buffer(json_text.to_utf8_buffer(), file_name, "application/json")
+		_show_save_selection("存档 %d 已交给浏览器下载" % slot_index)
+		return
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_SAVE_FILE
+	dialog.access = FileDialog.ACCESS_FILESYSTEM
+	dialog.filters = PackedStringArray(["*.json ; 黑剑存档"])
+	dialog.current_file = file_name
+	dialog.file_selected.connect(func(path: String) -> void:
+		var error := SaveManager.export_slot(slot_index, path)
+		_show_save_selection("存档已导出" if error == OK else SaveManager.last_error_message)
+	)
+	ui_root.add_child(dialog)
+	dialog.popup_centered_ratio(0.7)
+
+
+func _import_slot(slot_index: int) -> void:
+	var dialog := FileDialog.new()
+	dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	dialog.access = FileDialog.ACCESS_FILESYSTEM
+	dialog.filters = PackedStringArray(["*.json ; 黑剑存档"])
+	dialog.file_selected.connect(func(path: String) -> void: _finish_import_slot(slot_index, path))
+	ui_root.add_child(dialog)
+	dialog.popup_centered_ratio(0.7)
+
+
+func _finish_import_slot(slot_index: int, path: String) -> void:
+	var profile: ProfileData = SaveManager.import_slot(slot_index, path)
+	if profile == null:
+		_show_save_selection(SaveManager.last_error_message)
+		return
+	if GameState.current_slot_index() == slot_index:
+		GameState.load_profile(slot_index)
+	_show_save_selection("存档 %d 已导入" % slot_index)
+
+
+func _format_play_time(total_seconds: int) -> String:
+	return "%02d:%02d:%02d" % [int(total_seconds / 3600), int(total_seconds / 60) % 60, total_seconds % 60]
+
+
 func _show_character_selection() -> void:
 	game_running = false
+	save_select_open = false
 	character_select_open = true
 	leveling = false
 	pause_open = false
@@ -340,7 +541,7 @@ func _show_character_selection() -> void:
 	back.offset_top = -84
 	back.offset_right = 120
 	back.offset_bottom = -36
-	back.pressed.connect(_show_title)
+	back.pressed.connect(_show_save_selection)
 	background.add_child(back)
 
 
@@ -395,6 +596,9 @@ func _select_character(id: StringName) -> void:
 	if id not in [&"black_sword", &"minato"]:
 		return
 	selected_character_id = id
+	if GameState.has_current_profile():
+		GameState.current_profile.selected_character_id = id
+		GameState.save_current(&"character_selected")
 	character_select_open = false
 	_play_sfx(&"ui")
 	_start_game()
@@ -420,6 +624,7 @@ func _volume_row(title: String, bus: StringName) -> Control:
 
 func _start_game() -> void:
 	get_tree().paused = false
+	save_select_open = false
 	character_select_open = false
 	_clear_world()
 	_clear_ui()

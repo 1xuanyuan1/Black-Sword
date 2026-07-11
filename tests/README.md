@@ -21,6 +21,7 @@
 - `framework`：套件发现、异步执行和退出码。
 - `baseline`：步骤 0 之前已有的完整 Demo 回归测试。
 - `content_database`：Resource 内容加载、ID、引用完整性、旧数值和 `ContentRegistry` 兼容层。
+- `save_manager`：三档隔离、原子保存、备份恢复、导入导出、GameState 与存档选择 UI。
 
 ## 编写约定
 
