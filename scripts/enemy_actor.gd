@@ -137,6 +137,8 @@ func take_damage(event: DamageEvent) -> void:
 	var received_damage := event.amount
 	if elite and event.source is PlayerActor and is_instance_valid(arena) and arena.run_config is RunConfig:
 		received_damage *= arena.run_config.elite_boss_damage_multiplier
+		if arena.get("skill_controller") is SkillController:
+			received_damage *= (arena.get("skill_controller") as SkillController).target_category_damage_multiplier()
 	health -= received_damage
 	knockback_velocity += event.direction.normalized() * event.knockback
 	visual.play_hurt()

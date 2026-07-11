@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"sword_control"
+display_name = "御剑心诀"
+description = "延长投射物存在时间，并增强贯穿能力。"
+skill_type = 1
+accent = Color(0.47, 0.86, 1, 1)
+values = Array[Dictionary]([{
+"projectile_lifetime": 0.1,
+"pierce": 0,
+"upgrade": "投射物寿命 +10%"
+}, {
+"projectile_lifetime": 0.2,
+"pierce": 0,
+"upgrade": "投射物寿命累计 +20%"
+}, {
+"projectile_lifetime": 0.3,
+"pierce": 1,
+"upgrade": "投射物寿命 +30%，贯穿 +1"
+}, {
+"projectile_lifetime": 0.4,
+"pierce": 1,
+"upgrade": "投射物寿命累计 +40%"
+}, {
+"projectile_lifetime": 0.5,
+"pierce": 2,
+"upgrade": "化境：贯穿累计 +2"
+}])

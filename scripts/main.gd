@@ -33,7 +33,7 @@ var level_label: Label
 var timer_label: Label
 var wave_label: Label
 var kills_label: Label
-var skill_box: HBoxContainer
+var skill_box: VBoxContainer
 var item_effect_box: VBoxContainer
 var boss_panel: PanelContainer
 var boss_bar: ProgressBar
@@ -109,6 +109,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-items" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_items")
+	elif "--qa-skills" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_skills")
 
 
 func _process(_delta: float) -> void:
@@ -165,6 +168,24 @@ func _qa_enable_orbit() -> void:
 	if is_instance_valid(arena):
 		for _level in range(5):
 			arena.skill_system.upgrade(&"orbit_blades")
+
+
+func _qa_prepare_skills() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.35).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.spawn_timer = 9999.0
+	for id in [&"rasengan", &"flying_sword", &"sword_wave", &"orbit_blades", &"thunder"]:
+		arena.skill_controller.upgrade(id)
+	for id in [&"tempered_edge", &"spacetime_formula", &"sword_control", &"formation_breaking", &"light_step", &"pure_yang"]:
+		arena.skill_controller.upgrade(id)
+	arena.spawn_enemy(&"corpse", arena.player.global_position + Vector2(280, 0), true)
+	arena.announce("QA 技能验收：已填满 6 主动 + 6 心法", Color("ffd38a"))
+	await get_tree().create_timer(0.45).timeout
+	arena.collect_xp(arena.required_xp)
 
 
 func _qa_show_meta_progression() -> void:
@@ -1090,24 +1111,16 @@ func _build_hud() -> void:
 	info_row.add_child(timer_label)
 	info_row.add_child(wave_label)
 	info_row.add_child(kills_label)
-	skill_box = HBoxContainer.new()
+	skill_box = VBoxContainer.new()
+	skill_box.name = "SkillInventorySlots"
 	skill_box.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	skill_box.offset_left = -548
-	skill_box.offset_top = -118
+	skill_box.offset_left = -650
+	skill_box.offset_top = -178
 	skill_box.offset_right = -24
 	skill_box.offset_bottom = -46
 	skill_box.alignment = BoxContainer.ALIGNMENT_END
-	skill_box.add_theme_constant_override("separation", 8)
+	skill_box.add_theme_constant_override("separation", 5)
 	hud_root.add_child(skill_box)
-	for i in range(6):
-		var empty_slot := PanelContainer.new()
-		empty_slot.custom_minimum_size = Vector2(84, 68)
-		empty_slot.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.055, 0.09, 0.8), Color("374660"), 1, 7, 5))
-		var slot_label := _label("空", 15, Color("61708a"))
-		slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		empty_slot.add_child(slot_label)
-		skill_box.add_child(empty_slot)
 	item_effect_box = VBoxContainer.new()
 	item_effect_box.name = "TemporaryItemEffects"
 	item_effect_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -1236,26 +1249,39 @@ func _update_skills(levels: Dictionary, active_ids: Array[StringName], passive_i
 		return
 	for child in skill_box.get_children():
 		child.queue_free()
-	var ids: Array[StringName] = active_ids.duplicate()
-	ids.append_array(passive_ids)
+	_skill_slot_row("主动", active_ids, levels, Color("6ecbff"), "ActiveSkillRow")
+	_skill_slot_row("心法", passive_ids, levels, Color("d4a7ff"), "PassiveSkillRow")
+
+
+func _skill_slot_row(title: String, ids: Array[StringName], levels: Dictionary, row_color: Color, node_name: String) -> void:
+	var row := HBoxContainer.new()
+	row.name = node_name
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.add_theme_constant_override("separation", 6)
+	var title_label := _label(title, 14, row_color)
+	title_label.custom_minimum_size = Vector2(38, 52)
+	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(title_label)
 	for i in range(6):
 		var slot := PanelContainer.new()
-		slot.custom_minimum_size = Vector2(84, 68)
+		slot.custom_minimum_size = Vector2(90, 54)
 		if i < ids.size():
 			var id := ids[i]
 			var definition: SkillDefinition = arena.registry.skills[id]
-			slot.add_theme_stylebox_override("panel", _style_box(Color(0.06, 0.08, 0.13, 0.94), Color(definition.accent, 0.7), 2, 7, 5))
-			var label := _label("%s\n%s" % [_short_skill_name(definition.display_name), "◆".repeat(levels.get(id, 1))], 14, definition.accent)
+			slot.add_theme_stylebox_override("panel", _style_box(Color(0.06, 0.08, 0.13, 0.94), Color(definition.accent, 0.7), 2, 7, 4))
+			var label := _label("%s\n%s" % [_short_skill_name(definition.display_name), "◆".repeat(levels.get(id, 1))], 13, definition.accent)
 			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			slot.add_child(label)
 		else:
-			slot.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.055, 0.09, 0.8), Color("374660"), 1, 7, 5))
-			var empty := _label("空", 15, Color("61708a"))
+			slot.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.055, 0.09, 0.8), Color(row_color, 0.28), 1, 7, 4))
+			var empty := _label("空", 14, Color(row_color, 0.42))
 			empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			slot.add_child(empty)
-		skill_box.add_child(slot)
+		row.add_child(slot)
+	skill_box.add_child(row)
 
 
 func _update_temporary_item_effects(effects: Dictionary) -> void:

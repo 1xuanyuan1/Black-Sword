@@ -25,6 +25,7 @@
 - `meta_progression`：夜烬公式、重复提交保护、四条局外养成、全额重置、RunConfig、一次复生与局外大厅 UI。
 - `character_system`：五角色定义、解锁费用与条件、档位隔离、固有特性、龙胆枪、角色卡与素材校验。
 - `item_system`：五种即时效果、陶罐与精英掉落、同屏上限、四波保底、重复增益规则与临时效果 HUD。
+- `skill_inventory`：10+10 内容、6+6 槽位、候选过滤、五级心法属性聚合与双排 HUD。
 
 ## 编写约定
 
@@ -42,7 +43,7 @@
 & 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-meta-progression
 ```
 
-## 第 4～5 步人工验收入口
+## 第 4～6 步人工验收入口
 
 角色入口使用隔离测试存档，提供足够夜烬并开放四名角色的支付解锁资格：
 
@@ -54,4 +55,10 @@
 
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-items
+```
+
+技能入口直接进入战斗，填满 6 个主动与 6 个心法，并自动触发一次满槽升级三选一：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-skills
 ```

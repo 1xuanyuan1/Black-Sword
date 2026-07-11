@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"battlefield_tactics"
+display_name = "陷阵兵法"
+description = "提高移动速度，并强化对精英与 Boss 的伤害。"
+skill_type = 1
+accent = Color(0.66, 0.84, 1, 1)
+values = Array[Dictionary]([{
+"elite_boss_damage": 0.05,
+"speed": 0.03,
+"upgrade": "移速 +3%，对强敌伤害 +5%"
+}, {
+"elite_boss_damage": 0.1,
+"speed": 0.06,
+"upgrade": "移速累计 +6%，对强敌伤害 +10%"
+}, {
+"elite_boss_damage": 0.15,
+"speed": 0.09,
+"upgrade": "移速累计 +9%，对强敌伤害 +15%"
+}, {
+"elite_boss_damage": 0.2,
+"speed": 0.12,
+"upgrade": "移速累计 +12%，对强敌伤害 +20%"
+}, {
+"elite_boss_damage": 0.25,
+"speed": 0.15,
+"upgrade": "化境：七进七出"
+}])

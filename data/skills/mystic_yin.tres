@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"mystic_yin"
+display_name = "玄阴心法"
+description = "延长控制效果，并降低受到的伤害。"
+skill_type = 1
+accent = Color(0.49, 0.72, 1, 1)
+values = Array[Dictionary]([{
+"damage_reduction": 0.02,
+"status_duration": 0.1,
+"upgrade": "控制持续 +10%，受伤 -2%"
+}, {
+"damage_reduction": 0.04,
+"status_duration": 0.2,
+"upgrade": "控制持续累计 +20%，受伤 -4%"
+}, {
+"damage_reduction": 0.06,
+"status_duration": 0.3,
+"upgrade": "控制持续累计 +30%，受伤 -6%"
+}, {
+"damage_reduction": 0.08,
+"status_duration": 0.4,
+"upgrade": "控制持续累计 +40%，受伤 -8%"
+}, {
+"damage_reduction": 0.1,
+"status_duration": 0.5,
+"upgrade": "化境：玄阴护体"
+}])

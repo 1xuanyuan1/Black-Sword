@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"pure_yang"
+display_name = "纯阳功"
+description = "提高最大生命，并持续恢复气血。"
+skill_type = 1
+accent = Color(1, 0.57, 0.34, 1)
+values = Array[Dictionary]([{
+"max_health": 0.08,
+"regen": 0.001,
+"upgrade": "最大生命 +8%，每秒恢复 0.1%"
+}, {
+"max_health": 0.16,
+"regen": 0.002,
+"upgrade": "最大生命累计 +16%，每秒恢复 0.2%"
+}, {
+"max_health": 0.24,
+"regen": 0.003,
+"upgrade": "最大生命累计 +24%，每秒恢复 0.3%"
+}, {
+"max_health": 0.32,
+"regen": 0.004,
+"upgrade": "最大生命累计 +32%，每秒恢复 0.4%"
+}, {
+"max_health": 0.4,
+"regen": 0.005,
+"upgrade": "化境：纯阳不息"
+}])

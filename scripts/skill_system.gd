@@ -1,4 +1,4 @@
-class_name SkillSystem
+class_name SkillController
 extends Node
 
 signal skills_changed(levels: Dictionary, active_ids: Array[StringName], passive_ids: Array[StringName])
@@ -8,22 +8,35 @@ const DRAGON_TORNADO_TEXTURE := preload("res://assets/vfx/dragon_tornado.png")
 var arena: Node
 var player: PlayerActor
 var definitions: Dictionary
-var levels: Dictionary = {}
-var active_ids: Array[StringName] = []
-var passive_ids: Array[StringName] = []
+var inventory := SkillInventory.new()
+var levels: Dictionary:
+	get:
+		return inventory.levels
+var active_ids: Array[StringName]:
+	get:
+		return inventory.active_ids
+var passive_ids: Array[StringName]:
+	get:
+		return inventory.passive_ids
 var cooldowns: Dictionary = {}
 var orbit_angle := 0.0
 var orbit_animation_time := 0.0
 var orbit_visuals: Array[Sprite2D] = []
 var dragon_spear_casts := 0
 var rng := RandomNumberGenerator.new()
+var base_player_max_health := 100.0
 
 
-func setup(new_arena: Node, new_player: PlayerActor, skill_definitions: Dictionary, initial_skill_id: StringName = &"black_slash") -> void:
+func setup(new_arena: Node, new_player: PlayerActor, skill_definitions: Dictionary, initial_skill_id: StringName = &"black_slash", seed: int = 0) -> void:
 	arena = new_arena
 	player = new_player
 	definitions = skill_definitions
-	rng.randomize()
+	base_player_max_health = player.max_health
+	if seed == 0:
+		rng.randomize()
+	else:
+		rng.seed = seed
+	inventory.setup(skill_definitions, seed)
 	upgrade(initial_skill_id)
 
 
@@ -40,47 +53,35 @@ func process_skills(delta: float) -> void:
 		_update_orbit_visuals(orbit_stats)
 	else:
 		_clear_orbit_visuals()
+	var regen := health_regeneration_per_second()
+	if regen > 0.0 and player.health < player.max_health:
+		player.heal(player.max_health * regen * delta)
 	for id in active_ids:
 		cooldowns[id] = float(cooldowns.get(id, 0.0)) - delta
 		if cooldowns[id] <= 0.0:
 			_cast_skill(id)
 
 
-func get_upgrade_options(count: int = 3) -> Array[SkillDefinition]:
-	var candidates: Array[SkillDefinition] = []
-	for definition in definitions.values():
-		var current_level: int = levels.get(definition.id, 0)
-		if current_level > 0 and current_level < definition.max_level:
-			candidates.append(definition)
-		elif current_level == 0:
-			if definition.skill_type == SkillDefinition.SkillType.ACTIVE and active_ids.size() < 4:
-				candidates.append(definition)
-			elif definition.skill_type == SkillDefinition.SkillType.PASSIVE and passive_ids.size() < 2:
-				candidates.append(definition)
-	candidates.shuffle()
-	return candidates.slice(0, mini(count, candidates.size()))
+func get_upgrade_options(count: int = 3, custom_rng: RandomNumberGenerator = null) -> Array[SkillDefinition]:
+	return inventory.get_upgrade_options(count, custom_rng)
 
 
-func upgrade(id: StringName) -> void:
-	if not definitions.has(id):
-		return
-	var definition: SkillDefinition = definitions[id]
-	var current: int = levels.get(id, 0)
-	if current >= definition.max_level:
-		return
-	if current == 0:
-		if definition.skill_type == SkillDefinition.SkillType.ACTIVE:
-			if active_ids.size() >= 4:
-				return
-			active_ids.append(id)
-			cooldowns[id] = 0.15
-		else:
-			if passive_ids.size() >= 2:
-				return
-			passive_ids.append(id)
-	levels[id] = current + 1
+func upgrade(id: StringName) -> SkillUpgradeResult:
+	if id == SkillInventory.RECOVERY_ID:
+		player.heal(player.max_health * 0.20)
+		return SkillUpgradeResult.recovery()
+	var result := inventory.upgrade(id)
+	if not result.success:
+		return result
+	if result.added_to_slot and definitions[id].skill_type == SkillDefinition.SkillType.ACTIVE:
+		cooldowns[id] = 0.15
 	_apply_passives()
 	skills_changed.emit(levels.duplicate(), active_ids.duplicate(), passive_ids.duplicate())
+	return result
+
+
+func can_add_skill(id: StringName) -> bool:
+	return inventory.can_add_skill(id)
 
 
 func damage_multiplier() -> float:
@@ -108,15 +109,17 @@ func cooldown_multiplier() -> float:
 
 
 func area_multiplier() -> float:
+	var passive_bonus := _passive_value(&"formation_breaking", "area")
 	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
-		return (arena.get("run_config") as RunConfig).area_multiplier
-	return 1.0
+		return (arena.get("run_config") as RunConfig).area_multiplier + passive_bonus
+	return 1.0 + passive_bonus
 
 
 func status_duration_multiplier() -> float:
+	var passive_bonus := _passive_value(&"mystic_yin", "status_duration")
 	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
-		return (arena.get("run_config") as RunConfig).status_duration_multiplier
-	return 1.0
+		return (arena.get("run_config") as RunConfig).status_duration_multiplier + passive_bonus
+	return 1.0 + passive_bonus
 
 
 func melee_damage_multiplier() -> float:
@@ -125,15 +128,68 @@ func melee_damage_multiplier() -> float:
 	return 1.0
 
 
+func projectile_speed_multiplier() -> float:
+	return 1.0 + _passive_value(&"spacetime_formula", "projectile_speed") + _passive_value(&"sword_casket", "projectile_speed")
+
+
+func projectile_lifetime_multiplier() -> float:
+	return 1.0 + _passive_value(&"sword_control", "projectile_lifetime")
+
+
+func projectile_pierce_bonus() -> int:
+	return roundi(_passive_value(&"sword_control", "pierce"))
+
+
+func quantity_bonus() -> int:
+	return roundi(_passive_value(&"sword_casket", "quantity"))
+
+
+func knockback_multiplier() -> float:
+	return 1.0 + _passive_value(&"formation_breaking", "knockback")
+
+
+func critical_chance() -> float:
+	return minf(_passive_value(&"thunder_seal", "critical_chance"), 0.60)
+
+
+func critical_damage_multiplier() -> float:
+	var level := inventory.level_of(&"thunder_seal")
+	return 1.5 if level <= 0 else _passive_value(&"thunder_seal", "critical_multiplier")
+
+
+func target_category_damage_multiplier() -> float:
+	return 1.0 + _passive_value(&"battlefield_tactics", "elite_boss_damage")
+
+
+func health_regeneration_per_second() -> float:
+	return _passive_value(&"pure_yang", "regen")
+
+
+func make_player_damage_event(amount: float, direction: Vector2 = Vector2.ZERO, knockback: float = 0.0, tags: Array[StringName] = []) -> DamageEvent:
+	var critical := rng.randf() < critical_chance()
+	var final_amount := amount * (critical_damage_multiplier() if critical else 1.0)
+	return DamageEvent.create(final_amount, player, direction, knockback * knockback_multiplier(), critical, tags)
+
+
 func _apply_passives() -> void:
-	var light_level: int = levels.get(&"light_step", 0)
-	if light_level > 0:
-		var stats: Dictionary = definitions[&"light_step"].stats(light_level)
-		player.speed_multiplier = player.character_speed_multiplier * (1.0 + float(stats.get("speed", 0.0)))
-		player.pickup_range = 92.0 * (1.0 + float(stats.get("pickup", 0.0)))
-	else:
-		player.speed_multiplier = player.character_speed_multiplier
-		player.pickup_range = 92.0
+	var speed_bonus := _passive_value(&"light_step", "speed") + _passive_value(&"spacetime_formula", "speed") + _passive_value(&"battlefield_tactics", "speed")
+	player.speed_multiplier = player.character_speed_multiplier * (1.0 + speed_bonus)
+	player.pickup_range = 92.0 * (1.0 + _passive_value(&"light_step", "pickup"))
+	var old_max := player.max_health
+	var health_ratio := player.health / old_max if old_max > 0.0 else 1.0
+	player.max_health = base_player_max_health * (1.0 + _passive_value(&"pure_yang", "max_health"))
+	player.health = minf(player.max_health, player.max_health * health_ratio)
+	var base_reduction := 1.0 - player.base_damage_taken_multiplier
+	var passive_reduction := _passive_value(&"mystic_yin", "damage_reduction")
+	player.damage_taken_multiplier = maxf(0.55, 1.0 - base_reduction - passive_reduction)
+	player.health_changed.emit(player.health, player.max_health)
+
+
+func _passive_value(id: StringName, key: String) -> float:
+	var level := inventory.level_of(id)
+	if level <= 0 or not definitions.has(id):
+		return 0.0
+	return float((definitions[id] as SkillDefinition).stats(level).get(key, 0.0))
 
 
 func _cast_skill(id: StringName) -> void:
@@ -163,7 +219,7 @@ func _cast_rasengan(stats: Dictionary) -> void:
 		return
 	var base_direction: Vector2 = player.global_position.direction_to(target.global_position)
 	player.play_attack(base_direction)
-	var count: int = stats.get("count", 1)
+	var count: int = int(stats.get("count", 1)) + quantity_bonus()
 	for i in range(count):
 		var offset: float = (float(i) - float(count - 1) * 0.5) * 0.20
 		arena.add_projectile(CombatProjectile.create({
@@ -171,11 +227,11 @@ func _cast_rasengan(stats: Dictionary) -> void:
 			"owner": player,
 			"position": player.global_position + base_direction * 22.0,
 			"direction": base_direction.rotated(offset),
-			"speed": float(stats.get("speed", 290.0)),
+			"speed": float(stats.get("speed", 290.0)) * projectile_speed_multiplier(),
 			"damage": float(stats.get("damage", 25.0)) * damage_multiplier(),
 			"radius": float(stats.get("radius", 18.0)),
-			"pierce": int(stats.get("pierce", 0)),
-			"lifetime": 2.4,
+			"pierce": int(stats.get("pierce", 0)) + projectile_pierce_bonus(),
+			"lifetime": 2.4 * projectile_lifetime_multiplier(),
 			"kind": &"rasengan",
 			"homing": true,
 			"turn_speed": 3.8,
@@ -209,7 +265,7 @@ func _perform_slash(direction: Vector2, stats: Dictionary) -> void:
 			continue
 		var to_enemy := player.global_position.direction_to(enemy.global_position)
 		if player.global_position.distance_to(enemy.global_position) <= radius + enemy.hit_radius and absf(direction.angle_to(to_enemy)) <= arc_value * 0.5:
-			enemy.take_damage(DamageEvent.create(damage, player, to_enemy, 90.0, false, [&"slash"]))
+			enemy.take_damage(make_player_damage_event(damage, to_enemy, 90.0, [&"slash"]))
 	arena.play_sfx(&"slash")
 
 
@@ -225,14 +281,14 @@ func _cast_flying_sword(stats: Dictionary) -> void:
 		cooldowns[&"flying_sword"] = 0.25
 		return
 	var base_direction: Vector2 = player.global_position.direction_to(target.global_position)
-	var count: int = stats.get("count", 1)
+	var count: int = int(stats.get("count", 1)) + quantity_bonus()
 	for i in range(count):
 		var offset := (float(i) - float(count - 1) * 0.5) * 0.16
 		arena.add_projectile(CombatProjectile.create({
 			"arena": arena, "owner": player, "position": player.global_position,
-			"direction": base_direction.rotated(offset), "speed": stats.get("speed", 400.0),
+			"direction": base_direction.rotated(offset), "speed": float(stats.get("speed", 400.0)) * projectile_speed_multiplier(),
 			"damage": float(stats.get("damage", 15.0)) * damage_multiplier(), "radius": 13.0,
-			"pierce": int(stats.get("pierce", 1)), "lifetime": 2.1, "kind": &"sword",
+			"pierce": int(stats.get("pierce", 1)) + projectile_pierce_bonus(), "lifetime": 2.1 * projectile_lifetime_multiplier(), "kind": &"sword",
 			"homing": true, "returning": stats.get("returning", false), "knockback": 42.0,
 			"bounces": int(stats.get("bounces", 0)),
 		}))
@@ -253,10 +309,10 @@ func _cast_sword_wave(stats: Dictionary) -> void:
 func _spawn_wave(direction: Vector2, stats: Dictionary) -> void:
 	arena.add_projectile(CombatProjectile.create({
 		"arena": arena, "owner": player, "position": player.global_position,
-		"direction": direction, "speed": stats.get("speed", 450.0),
+		"direction": direction, "speed": float(stats.get("speed", 450.0)) * projectile_speed_multiplier(),
 		"damage": float(stats.get("damage", 22.0)) * damage_multiplier(),
-		"radius": float(stats.get("width", 24.0)), "pierce": int(stats.get("pierce", 4)),
-		"lifetime": 2.0, "kind": &"wave", "knockback": 70.0,
+		"radius": float(stats.get("width", 24.0)), "pierce": int(stats.get("pierce", 4)) + projectile_pierce_bonus(),
+		"lifetime": 2.0 * projectile_lifetime_multiplier(), "kind": &"wave", "knockback": 70.0,
 		"bounces": int(stats.get("bounces", 0)),
 	}))
 	player.play_attack(direction)
@@ -269,7 +325,7 @@ func _cast_orbit(stats: Dictionary) -> void:
 	for tornado_position in _orbit_positions(stats):
 		for enemy in arena.enemies.duplicate():
 			if is_instance_valid(enemy) and not enemy.dead and tornado_position.distance_to(enemy.global_position) < hit_radius + enemy.hit_radius:
-				enemy.take_damage(DamageEvent.create(damage, player, tornado_position.direction_to(enemy.global_position), 38.0, false, [&"tornado", &"orbit"]))
+				enemy.take_damage(make_player_damage_event(damage, tornado_position.direction_to(enemy.global_position), 38.0, [&"tornado", &"orbit"]))
 
 
 func _orbit_positions(stats: Dictionary) -> Array[Vector2]:
@@ -339,7 +395,7 @@ func _cast_thunder(stats: Dictionary) -> void:
 			hit[id] = true
 			var line: Vector2 = current.global_position - current_position
 			arena.add_effect(EffectNode.create(&"lightning", current_position, {"line_end": line, "duration": 0.26, "color": Color("fff36b")}))
-			current.take_damage(DamageEvent.create(float(stats.get("damage", 24.0)) * damage_multiplier(), player, line.normalized(), 35.0, false, [&"lightning"]))
+			current.take_damage(make_player_damage_event(float(stats.get("damage", 24.0)) * damage_multiplier(), line.normalized(), 35.0, [&"lightning"]))
 			current_position = current.global_position
 			current = _nearest_unhit(current_position, available, hit)
 	arena.play_sfx(&"magic")
@@ -369,7 +425,7 @@ func _cast_frost(stats: Dictionary) -> void:
 	arena.add_effect(EffectNode.create(&"frost", center, {"radius": radius_value, "duration": duration_value, "color": Color("7edbff"), "z": 3}))
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
-			enemy.take_damage(DamageEvent.create(float(stats.get("damage", 15.0)) * damage_multiplier(), player, center.direction_to(enemy.global_position), 22.0, false, [&"frost"]))
+			enemy.take_damage(make_player_damage_event(float(stats.get("damage", 15.0)) * damage_multiplier(), center.direction_to(enemy.global_position), 22.0, [&"frost"]))
 			enemy.apply_slow(stats.get("slow", 0.65), duration_value, stats.get("freeze", false))
 	arena.play_sfx(&"magic")
 
@@ -386,7 +442,7 @@ func _perform_palm(stats: Dictionary, scale_value: float) -> void:
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			var direction := player.global_position.direction_to(enemy.global_position)
-			enemy.take_damage(DamageEvent.create(float(stats.get("damage", 18.0)) * damage_multiplier(), player, direction, float(stats.get("knockback", 130.0)), false, [&"palm"]))
+			enemy.take_damage(make_player_damage_event(float(stats.get("damage", 18.0)) * damage_multiplier(), direction, float(stats.get("knockback", 130.0)), [&"palm"]))
 	arena.play_sfx(&"magic")
 
 
@@ -416,16 +472,16 @@ func _resolve_sword_rain(center: Vector2, stats: Dictionary) -> void:
 		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= float(stats.get("radius", 110.0)) * area_multiplier() + enemy.hit_radius:
 			targets.append(enemy)
 	targets.shuffle()
-	var count: int = stats.get("count", 5)
+	var count: int = int(stats.get("count", 5)) + quantity_bonus()
 	for i in range(mini(count, targets.size())):
 		var enemy = targets[i]
 		arena.add_effect(EffectNode.create(&"sword", enemy.global_position + Vector2(0, -22), {"duration": 0.38, "color": Color("d8c9ff")}))
-		enemy.take_damage(DamageEvent.create(float(stats.get("damage", 18.0)) * damage_multiplier(), player, Vector2.DOWN, 40.0, false, [&"sword_rain"]))
+		enemy.take_damage(make_player_damage_event(float(stats.get("damage", 18.0)) * damage_multiplier(), Vector2.DOWN, 40.0, [&"sword_rain"]))
 	if stats.get("giant", false):
 		arena.add_effect(EffectNode.create(&"sword", center + Vector2(0, -30), {"duration": 0.62, "color": Color("fff2cf")}))
 		for enemy in targets:
 			if is_instance_valid(enemy):
-				enemy.take_damage(DamageEvent.create(float(stats.get("damage", 18.0)) * 0.55 * damage_multiplier(), player, center.direction_to(enemy.global_position), 70.0, false, [&"giant_sword"]))
+				enemy.take_damage(make_player_damage_event(float(stats.get("damage", 18.0)) * 0.55 * damage_multiplier(), center.direction_to(enemy.global_position), 70.0, [&"giant_sword"]))
 	arena.play_sfx(&"slash")
 
 
@@ -471,7 +527,7 @@ func _perform_dragon_spear(direction: Vector2, stats: Dictionary) -> int:
 	var hit_count := 0
 	for candidate in candidates:
 		var enemy = candidate["enemy"]
-		enemy.take_damage(DamageEvent.create(damage, player, direction, 105.0, false, [&"dragon_spear", &"melee"]))
+		enemy.take_damage(make_player_damage_event(damage, direction, 105.0, [&"dragon_spear", &"melee"]))
 		hit_count += 1
 		if hit_count >= max_targets:
 			break

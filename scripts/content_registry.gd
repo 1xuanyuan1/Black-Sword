@@ -44,11 +44,19 @@ func wave_for_time(elapsed: float) -> WaveDefinition:
 
 func validate() -> PackedStringArray:
 	var errors := _database_errors.duplicate()
-	if skills.size() != 12:
-		errors.append("技能数量应为 12，实际为 %d" % skills.size())
+	if skills.size() != 20:
+		errors.append("技能数量应为 20，实际为 %d" % skills.size())
+	var active_count := 0
+	var passive_count := 0
 	for skill in skills.values():
 		if skill.max_level != 5:
 			errors.append("%s 的最大等级不是 5" % skill.display_name)
+		if skill.skill_type == SkillDefinition.SkillType.ACTIVE:
+			active_count += 1
+		elif skill.skill_type == SkillDefinition.SkillType.PASSIVE:
+			passive_count += 1
+	if active_count != 10 or passive_count != 10:
+		errors.append("技能池应为 10 主动 + 10 心法，实际为 %d + %d" % [active_count, passive_count])
 	if enemies.size() != 4:
 		errors.append("敌人类型应为 4")
 	if waves.size() != 4:

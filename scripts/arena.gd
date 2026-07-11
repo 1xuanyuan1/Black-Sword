@@ -29,8 +29,12 @@ const ENEMY_SCENES: Dictionary = {
 @onready var pickup_layer: Node2D = $PickupLayer
 @onready var projectile_layer: Node2D = $ProjectileLayer
 @onready var effect_layer: Node2D = $EffectLayer
-@onready var skill_system: SkillSystem = $GameplaySystems/SkillSystem
+@onready var skill_controller: SkillController = $GameplaySystems/SkillController
 @onready var item_drop_system: ItemDropSystem = $GameplaySystems/ItemDropSystem
+
+var skill_system: SkillController:
+	get:
+		return skill_controller
 
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
@@ -77,8 +81,8 @@ func _ready() -> void:
 	player.health_changed.connect(func(current: float, maximum: float) -> void: player_health_changed.emit(current, maximum))
 	player.died.connect(_on_player_death)
 	item_drop_system.setup(self, ContentDatabase.all_items())
-	skill_system.setup(self, player, registry.skills, player.initial_skill_id)
-	skill_system.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
+	skill_controller.setup(self, player, registry.skills, player.initial_skill_id)
+	skill_controller.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
 	xp_changed.emit(current_xp, required_xp, player_level)
 	player_health_changed.emit(player.health, player.max_health)
 	announce("第一夜·尸行", Color("d9e4ff"))
@@ -114,8 +118,8 @@ func _process(delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if run_active and is_instance_valid(skill_system):
-		skill_system.process_skills(delta)
+	if run_active and is_instance_valid(skill_controller):
+		skill_controller.process_skills(delta)
 
 
 func spawn_enemy(id: StringName, at_position: Vector2, is_elite: bool = false) -> EnemyActor:
@@ -259,7 +263,7 @@ func complete_levelup() -> void:
 
 
 func _request_next_levelup() -> void:
-	var options := skill_system.get_upgrade_options(3)
+	var options := skill_controller.get_upgrade_options(3)
 	if options.is_empty():
 		player.heal(12.0)
 		complete_levelup()
@@ -268,8 +272,9 @@ func _request_next_levelup() -> void:
 
 
 func choose_upgrade(id: StringName) -> void:
-	skill_system.upgrade(id)
-	player.heal(3.0)
+	var result := skill_controller.upgrade(id)
+	if result.success and not result.recovered_health:
+		player.heal(3.0)
 	complete_levelup()
 
 

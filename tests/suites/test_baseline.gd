@@ -61,7 +61,7 @@ func _run_baseline() -> void:
 	var rasengan_level_three: Dictionary = rasengan_definition.stats(3)
 	var rasengan_level_four: Dictionary = rasengan_definition.stats(4)
 	var rasengan_level_five: Dictionary = rasengan_definition.stats(5)
-	_check(registry.validate().is_empty(), "内容注册表包含 12 个五级技能、5 名角色、4 类敌人与 4 个波次")
+	_check(registry.validate().is_empty(), "内容注册表包含 20 个五级技能、5 名角色、4 类敌人与 4 个波次")
 	_check_actor_preset("res://scenes/actors/player.tscn", "PlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_minato.tscn", "MinatoPlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_ning_shuanghua.tscn", "NingShuanghuaPlayerCharacter", "res://scripts/player_actor.gd")
@@ -84,7 +84,7 @@ func _run_baseline() -> void:
 	_check(battle_root.name == "BattleArena", "组装后的战斗场景拥有职责明确的根节点名称")
 	_check(battle_root.get_node_or_null("Environment/AbandonedTempleMap") is ArenaBackdrop, "战斗场景引用独立地图预设")
 	_check(battle_root.get_node_or_null("ActorLayer/PlayerSpawnPoint") is Marker2D, "战斗场景提供所选玩家预设的出生点")
-	_check(battle_root.get_node_or_null("GameplaySystems/SkillSystem") is SkillSystem, "战斗场景显式组织玩法系统")
+	_check(battle_root.get_node_or_null("GameplaySystems/SkillController") is SkillController, "战斗场景显式组织技能控制器")
 	_check(battle_root.get_node_or_null("ProjectileLayer") is Node2D and battle_root.get_node_or_null("PickupLayer") is Node2D and battle_root.get_node_or_null("EffectLayer") is Node2D, "战斗场景按职责拆分运行时对象层")
 	battle_root.free()
 	var joystick_scene: PackedScene = load("res://scenes/ui/virtual_joystick.tscn") as PackedScene
@@ -250,8 +250,12 @@ func _run_baseline() -> void:
 	system.upgrade(&"thunder")
 	system.upgrade(&"light_step")
 	system.upgrade(&"tempered_edge")
-	_check(system.active_ids.size() == 4, "主动招式槽严格限制为 4")
-	_check(system.passive_ids.size() == 2, "心法槽严格限制为 2")
+	system.upgrade(&"frost")
+	system.upgrade(&"sun_palm")
+	for passive_id in [&"spacetime_formula", &"sword_control", &"formation_breaking", &"thunder_seal"]:
+		system.upgrade(passive_id)
+	_check(system.active_ids.size() == 6, "主动招式槽严格限制为 6")
+	_check(system.passive_ids.size() == 6, "心法槽严格限制为 6")
 	var options := system.get_upgrade_options(3)
 	var options_valid := true
 	for option in options:

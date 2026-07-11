@@ -184,6 +184,16 @@ func _validate_references() -> PackedStringArray:
 		var skill_definition := definition as SkillDefinition
 		if skill_definition.values.size() != skill_definition.max_level or skill_definition.max_level <= 0:
 			errors.append("技能 %s 的等级数据与 max_level 不一致" % skill_definition.id)
+	var active_skill_count := 0
+	var passive_skill_count := 0
+	for definition in _skills.values():
+		var skill_definition := definition as SkillDefinition
+		if skill_definition.skill_type == SkillDefinition.SkillType.ACTIVE:
+			active_skill_count += 1
+		elif skill_definition.skill_type == SkillDefinition.SkillType.PASSIVE:
+			passive_skill_count += 1
+	if active_skill_count != 10 or passive_skill_count != 10:
+		errors.append("V1 技能池必须为 10 主动 + 10 心法")
 	for definition in _enemies.values():
 		var enemy_definition := definition as EnemyDefinition
 		if enemy_definition.actor_scene == null:

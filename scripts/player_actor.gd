@@ -26,6 +26,7 @@ var speed_multiplier := 1.0
 var character_speed_multiplier := 1.0
 var pickup_range := 92.0
 var damage_taken_multiplier := 1.0
+var base_damage_taken_multiplier := 1.0
 var invulnerability := 0.0
 var dead := false
 var last_direction := Vector2.DOWN
@@ -57,7 +58,8 @@ func apply_run_config(config: RunConfig) -> void:
 	health = max_health
 	character_speed_multiplier = config.move_speed_multiplier
 	speed_multiplier = character_speed_multiplier
-	damage_taken_multiplier = clampf(config.damage_taken_multiplier, 0.55, 1.0)
+	base_damage_taken_multiplier = clampf(config.damage_taken_multiplier, 0.55, 1.0)
+	damage_taken_multiplier = base_damage_taken_multiplier
 	revive_rank = clampi(config.revive_rank, 0, 3)
 	revive_used = false
 	health_changed.emit(health, max_health)

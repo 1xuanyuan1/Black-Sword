@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"spacetime_formula"
+display_name = "时空间术式"
+description = "稳定移动与投射轨迹，提高速度。"
+skill_type = 1
+accent = Color(0.42, 0.78, 1, 1)
+values = Array[Dictionary]([{
+"projectile_speed": 0.08,
+"speed": 0.03,
+"upgrade": "投射速度 +8%，移速 +3%"
+}, {
+"projectile_speed": 0.16,
+"speed": 0.06,
+"upgrade": "投射速度累计 +16%，移速 +6%"
+}, {
+"projectile_speed": 0.24,
+"speed": 0.09,
+"upgrade": "投射速度累计 +24%，移速 +9%"
+}, {
+"projectile_speed": 0.32,
+"speed": 0.12,
+"upgrade": "投射速度累计 +32%，移速 +12%"
+}, {
+"projectile_speed": 0.4,
+"speed": 0.15,
+"upgrade": "化境：移形换影"
+}])

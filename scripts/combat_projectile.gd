@@ -119,7 +119,7 @@ func _check_enemy_hits() -> void:
 			var damage_tags: Array[StringName] = [&"projectile"]
 			if projectile_kind == &"rasengan":
 				damage_tags.append(&"rasengan")
-			enemy.take_damage(DamageEvent.create(damage, owner_node, direction, knockback, false, damage_tags))
+			enemy.take_damage(_player_damage_event(damage, direction, knockback, damage_tags))
 			if projectile_kind == &"rasengan":
 				_trigger_rasengan_impact(enemy)
 			pierce -= 1
@@ -140,12 +140,10 @@ func _trigger_rasengan_impact(primary_enemy: Node) -> void:
 				continue
 			if global_position.distance_to(other_enemy.global_position) <= explosion_radius + other_enemy.hit_radius:
 				var blast_direction: Vector2 = global_position.direction_to(other_enemy.global_position)
-				other_enemy.take_damage(DamageEvent.create(
+				other_enemy.take_damage(_player_damage_event(
 					damage * explosion_damage_multiplier,
-					owner_node,
 					blast_direction,
 					knockback * 0.72,
-					false,
 					[&"projectile", &"rasengan", &"area"],
 				))
 	if split_count > 0:
@@ -180,6 +178,12 @@ func _check_player_hit() -> void:
 	if global_position.distance_squared_to(arena.player.global_position) <= pow(radius + 18.0, 2.0):
 		arena.player.take_damage(DamageEvent.create(damage, owner_node, direction, knockback, false, [&"enemy_projectile"]))
 		queue_free()
+
+
+func _player_damage_event(amount: float, hit_direction: Vector2, hit_knockback: float, tags: Array[StringName]) -> DamageEvent:
+	if owner_node is PlayerActor and is_instance_valid(arena) and arena.get("skill_controller") is SkillController:
+		return (arena.get("skill_controller") as SkillController).make_player_damage_event(amount, hit_direction, hit_knockback, tags)
+	return DamageEvent.create(amount, owner_node, hit_direction, hit_knockback, false, tags)
 
 
 func _draw() -> void:

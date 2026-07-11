@@ -189,6 +189,8 @@ enum SkillType { ACTIVE, PASSIVE, EVOLVED }
 - 运行时不得修改共享 `SkillDefinition`；本局等级保存在 `SkillInventory`。
 - 赵云新增 `dragon_spear`、`battlefield_tactics` 和 `seven_in_seven_out`，内容池合计 10 主动、10 心法和 10 进阶。
 
+V1 心法稳定 ID 为：`tempered_edge`、`spacetime_formula`、`sword_control`、`formation_breaking`、`light_step`、`thunder_seal`、`mystic_yin`、`pure_yang`、`sword_casket`、`battlefield_tactics`。这些 ID 将被进阶配方引用，进入正式数据后不得改作其他含义。
+
 ### 6.3 `EvolutionRecipe : Resource`
 
 ```gdscript

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"sword_casket"
+display_name = "藏剑匣"
+description = "加快飞行与落剑速度，增加部分招式数量。"
+skill_type = 1
+accent = Color(0.8, 0.72, 1, 1)
+values = Array[Dictionary]([{
+"projectile_speed": 0.06,
+"quantity": 0,
+"upgrade": "投射与剑光速度 +6%"
+}, {
+"projectile_speed": 0.12,
+"quantity": 0,
+"upgrade": "投射与剑光速度累计 +12%"
+}, {
+"projectile_speed": 0.18,
+"quantity": 1,
+"upgrade": "速度 +18%，数量 +1"
+}, {
+"projectile_speed": 0.24,
+"quantity": 1,
+"upgrade": "投射与剑光速度累计 +24%"
+}, {
+"projectile_speed": 0.3,
+"quantity": 2,
+"upgrade": "化境：数量累计 +2"
+}])

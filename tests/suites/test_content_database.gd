@@ -16,11 +16,13 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	database.reload_content()
 
 	context.check(database.validate_all().is_empty(), "ContentDatabase 的资源引用校验通过")
-	context.check(database.content_counts() == {"characters": 5, "skills": 12, "enemies": 4, "waves": 4, "items": 5, "meta_upgrades": 4}, "ContentDatabase 加载五角色、五道具与当前 Demo 内容")
+	context.check(database.content_counts() == {"characters": 5, "skills": 20, "enemies": 4, "waves": 4, "items": 5, "meta_upgrades": 4}, "ContentDatabase 加载五角色、10+10 技能、五道具与当前 Demo 内容")
 
 	var expected_skill_ids := [
 		&"black_slash", &"rasengan", &"flying_sword", &"sword_wave", &"orbit_blades",
 		&"thunder", &"frost", &"sun_palm", &"sword_rain", &"dragon_spear", &"light_step", &"tempered_edge",
+		&"spacetime_formula", &"sword_control", &"formation_breaking", &"thunder_seal",
+		&"mystic_yin", &"pure_yang", &"sword_casket", &"battlefield_tactics",
 	]
 	for skill_id in expected_skill_ids:
 		var definition: SkillDefinition = database.skill(skill_id)

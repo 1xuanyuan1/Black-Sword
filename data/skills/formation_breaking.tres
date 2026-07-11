@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"formation_breaking"
+display_name = "破阵真意"
+description = "扩大招式范围，提高击退力量。"
+skill_type = 1
+accent = Color(0.95, 0.72, 0.42, 1)
+values = Array[Dictionary]([{
+"area": 0.07,
+"knockback": 0.1,
+"upgrade": "范围 +7%，击退 +10%"
+}, {
+"area": 0.14,
+"knockback": 0.2,
+"upgrade": "范围累计 +14%，击退 +20%"
+}, {
+"area": 0.21,
+"knockback": 0.3,
+"upgrade": "范围累计 +21%，击退 +30%"
+}, {
+"area": 0.28,
+"knockback": 0.4,
+"upgrade": "范围累计 +28%，击退 +40%"
+}, {
+"area": 0.35,
+"knockback": 0.5,
+"upgrade": "化境：破阵摧锋"
+}])

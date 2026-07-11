@@ -1,7 +1,7 @@
 class_name SkillDefinition
 extends Resource
 
-enum SkillType { ACTIVE, PASSIVE }
+enum SkillType { ACTIVE, PASSIVE, EVOLVED }
 
 @export var id: StringName
 @export var display_name: String
