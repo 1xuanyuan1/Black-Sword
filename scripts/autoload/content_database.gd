@@ -4,18 +4,21 @@ const CHARACTER_DEFINITION_SCRIPT := preload("res://scripts/data/character_defin
 const SKILL_DEFINITION_SCRIPT := preload("res://scripts/data/skill_definition.gd")
 const ENEMY_DEFINITION_SCRIPT := preload("res://scripts/data/enemy_definition.gd")
 const WAVE_DEFINITION_SCRIPT := preload("res://scripts/data/wave_definition.gd")
+const ITEM_DEFINITION_SCRIPT := preload("res://scripts/data/item_definition.gd")
 const META_UPGRADE_DEFINITION_SCRIPT := preload("res://scripts/data/meta_upgrade_definition.gd")
 
 const CHARACTER_DIRECTORY := "res://data/characters"
 const SKILL_DIRECTORY := "res://data/skills"
 const ENEMY_DIRECTORY := "res://data/enemies"
 const WAVE_DIRECTORY := "res://data/waves"
+const ITEM_DIRECTORY := "res://data/items"
 const META_UPGRADE_DIRECTORY := "res://data/meta"
 
 var _characters: Dictionary = {}
 var _skills: Dictionary = {}
 var _enemies: Dictionary = {}
 var _waves: Array[WaveDefinition] = []
+var _items: Dictionary = {}
 var _meta_upgrades: Dictionary = {}
 var _load_errors := PackedStringArray()
 
@@ -31,12 +34,14 @@ func reload_content() -> void:
 	_skills.clear()
 	_enemies.clear()
 	_waves.clear()
+	_items.clear()
 	_meta_upgrades.clear()
 	_load_errors.clear()
 	_load_indexed_resources(CHARACTER_DIRECTORY, CHARACTER_DEFINITION_SCRIPT, _characters)
 	_load_indexed_resources(SKILL_DIRECTORY, SKILL_DEFINITION_SCRIPT, _skills)
 	_load_indexed_resources(ENEMY_DIRECTORY, ENEMY_DEFINITION_SCRIPT, _enemies)
 	_load_waves()
+	_load_indexed_resources(ITEM_DIRECTORY, ITEM_DEFINITION_SCRIPT, _items)
 	_load_indexed_resources(META_UPGRADE_DIRECTORY, META_UPGRADE_DEFINITION_SCRIPT, _meta_upgrades)
 	_load_errors.append_array(_validate_references())
 
@@ -64,6 +69,10 @@ func meta_upgrade(id: StringName) -> MetaUpgradeDefinition:
 	return _meta_upgrades.get(id) as MetaUpgradeDefinition
 
 
+func item(id: StringName) -> ItemDefinition:
+	return _items.get(id) as ItemDefinition
+
+
 func all_characters() -> Dictionary:
 	return _characters.duplicate()
 
@@ -84,6 +93,10 @@ func all_meta_upgrades() -> Dictionary:
 	return _meta_upgrades.duplicate()
 
 
+func all_items() -> Dictionary:
+	return _items.duplicate()
+
+
 func validate_all() -> PackedStringArray:
 	return _load_errors.duplicate()
 
@@ -94,6 +107,7 @@ func content_counts() -> Dictionary:
 		"skills": _skills.size(),
 		"enemies": _enemies.size(),
 		"waves": _waves.size(),
+		"items": _items.size(),
 		"meta_upgrades": _meta_upgrades.size(),
 	}
 
@@ -200,4 +214,14 @@ func _validate_references() -> PackedStringArray:
 			if cost <= 0:
 				errors.append("局外养成 %s 包含无效费用" % meta_definition.id)
 				break
+	for definition in _items.values():
+		var item_definition := definition as ItemDefinition
+		if item_definition.icon == null:
+			errors.append("局内道具 %s 缺少图标" % item_definition.id)
+		if item_definition.world_scene == null:
+			errors.append("局内道具 %s 缺少世界场景" % item_definition.id)
+		if item_definition.base_weight <= 0.0:
+			errors.append("局内道具 %s 的掉落权重无效" % item_definition.id)
+		if not ItemEffectRegistry.new().supports(item_definition.effect_id):
+			errors.append("局内道具 %s 使用了未注册效果：%s" % [item_definition.id, item_definition.effect_id])
 	return errors

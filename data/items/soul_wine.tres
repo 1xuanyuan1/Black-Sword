@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/item_definition.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/items/Gourd.png" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/items/item_pickup.tscn" id="3_scene"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"soul_wine"
+display_name = "烈魂酒"
+description = "十五秒内提高伤害与招式释放速度。"
+icon = ExtResource("2_icon")
+world_scene = ExtResource("3_scene")
+effect_id = &"soul_wine"
+effect_values = {
+"cooldown_reduction": 0.15,
+"damage": 0.3,
+"duration": 15.0
+}
+base_weight = 0.7
+accent = Color(1, 0.38, 0.28, 1)

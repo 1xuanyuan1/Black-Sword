@@ -34,6 +34,7 @@ var timer_label: Label
 var wave_label: Label
 var kills_label: Label
 var skill_box: HBoxContainer
+var item_effect_box: VBoxContainer
 var boss_panel: PanelContainer
 var boss_bar: ProgressBar
 var boss_value_label: Label
@@ -105,6 +106,9 @@ func _handle_qa_args() -> void:
 		call_deferred("_qa_show_meta_progression")
 	elif "--qa-characters" in OS.get_cmdline_user_args():
 		call_deferred("_qa_show_characters")
+	elif "--qa-items" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_items")
 
 
 func _process(_delta: float) -> void:
@@ -193,6 +197,45 @@ func _qa_show_characters() -> void:
 	GameState.save_current(&"qa_character_seed")
 	selected_character_id = profile.selected_character_id
 	_show_character_selection("QA 验收档：所有角色均可支付解锁，使用独立测试存档")
+
+
+func _qa_prepare_items() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.25).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.spawn_timer = 9999.0
+	arena.player.health = arena.player.max_health * 0.45
+	arena.player.health_changed.emit(arena.player.health, arena.player.max_health)
+	for index in range(6):
+		var orb := ExperienceOrb.create(arena, arena.player.global_position + Vector2.from_angle(TAU * float(index) / 6.0) * 150.0, 3)
+		orb.add_to_group("xp_orbs")
+		arena.pickup_layer.add_child(orb)
+	arena.spawn_enemy(&"corpse", arena.player.global_position + Vector2(230, 0), false)
+	arena.spawn_enemy(&"corpse", arena.player.global_position + Vector2(285, 45), true)
+	var queue: Array[StringName] = [&"healing_salve", &"soul_talisman", &"soul_bell", &"binding_talisman", &"soul_wine"]
+	arena.item_drop_system.set_meta("qa_item_queue", queue)
+	arena.item_drop_system.set_meta("qa_item_spawn_index", 0)
+	arena.item_drop_system.item_collected.connect(_qa_fill_item_pickups.bind(arena.item_drop_system))
+	_qa_fill_item_pickups(&"", arena.item_drop_system)
+	arena.announce("QA 道具验收：靠近光圈依次拾取五种道具", Color("ffd38a"))
+
+
+func _qa_fill_item_pickups(_collected_id: StringName, drop_system: ItemDropSystem) -> void:
+	if not OS.is_debug_build() or not is_instance_valid(drop_system):
+		return
+	var queue: Array = drop_system.get_meta("qa_item_queue", [])
+	var spawn_index := int(drop_system.get_meta("qa_item_spawn_index", 0))
+	var offsets := [Vector2(-120, 105), Vector2(0, 105), Vector2(120, 105), Vector2(-70, 180), Vector2(70, 180)]
+	while not queue.is_empty() and drop_system.active_pickups.size() < ItemDropSystem.MAX_ACTIVE_PICKUPS:
+		var id := StringName(queue.pop_front())
+		var offset: Vector2 = offsets[mini(spawn_index, offsets.size() - 1)]
+		drop_system.spawn_item(id, arena.player.global_position + offset, true)
+		spawn_index += 1
+	drop_system.set_meta("qa_item_queue", queue)
+	drop_system.set_meta("qa_item_spawn_index", spawn_index)
 
 
 func _input(event: InputEvent) -> void:
@@ -985,6 +1028,7 @@ func _refresh_hud_from_arena() -> void:
 	_update_health(arena.player.health, arena.player.max_health)
 	_update_xp(arena.current_xp, arena.required_xp, arena.player_level)
 	_update_skills(arena.skill_system.levels, arena.skill_system.active_ids, arena.skill_system.passive_ids)
+	_update_temporary_item_effects(arena.current_temporary_item_effects())
 
 
 func _connect_arena() -> void:
@@ -992,6 +1036,7 @@ func _connect_arena() -> void:
 	arena.xp_changed.connect(_update_xp)
 	arena.stats_changed.connect(_update_stats)
 	arena.skills_changed.connect(_update_skills)
+	arena.temporary_item_effects_changed.connect(_update_temporary_item_effects)
 	arena.level_up_requested.connect(_show_level_up)
 	arena.boss_spawned.connect(_show_boss)
 	arena.boss_health_changed.connect(_update_boss_health)
@@ -1063,6 +1108,16 @@ func _build_hud() -> void:
 		slot_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		empty_slot.add_child(slot_label)
 		skill_box.add_child(empty_slot)
+	item_effect_box = VBoxContainer.new()
+	item_effect_box.name = "TemporaryItemEffects"
+	item_effect_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	item_effect_box.offset_left = -330
+	item_effect_box.offset_top = 82
+	item_effect_box.offset_right = -24
+	item_effect_box.offset_bottom = 190
+	item_effect_box.alignment = BoxContainer.ALIGNMENT_END
+	item_effect_box.add_theme_constant_override("separation", 6)
+	hud_root.add_child(item_effect_box)
 	boss_panel = PanelContainer.new()
 	boss_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	boss_panel.offset_left = -250
@@ -1201,6 +1256,38 @@ func _update_skills(levels: Dictionary, active_ids: Array[StringName], passive_i
 			empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			slot.add_child(empty)
 		skill_box.add_child(slot)
+
+
+func _update_temporary_item_effects(effects: Dictionary) -> void:
+	if not is_instance_valid(item_effect_box):
+		return
+	for child in item_effect_box.get_children():
+		child.queue_free()
+	for id in effects:
+		var definition := ContentDatabase.item(id)
+		if definition == null:
+			continue
+		var effect: Dictionary = effects[id]
+		var panel := PanelContainer.new()
+		panel.name = "TemporaryItemEffect_" + String(id)
+		panel.custom_minimum_size = Vector2(292, 48)
+		panel.add_theme_stylebox_override("panel", _style_box(Color(0.04, 0.07, 0.12, 0.92), Color(definition.accent, 0.75), 2, 8, 6))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		panel.add_child(row)
+		var icon := TextureRect.new()
+		icon.texture = definition.icon
+		icon.modulate = definition.accent
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.custom_minimum_size = Vector2(34, 34)
+		row.add_child(icon)
+		var remaining := float(effect.get("remaining", 0.0))
+		var label := _label("%s  %.1f 秒\n伤害 +30%% · 冷却 -15%%" % [definition.display_name, remaining], 15, definition.accent)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(label)
+		item_effect_box.add_child(panel)
 
 
 func _short_skill_name(name: String) -> String:

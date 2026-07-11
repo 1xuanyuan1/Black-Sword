@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/item_definition.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/items/Gourd.png" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/items/item_pickup.tscn" id="3_scene"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"soul_bell"
+display_name = "镇魂铃"
+description = "铃响一声，群邪魂魄动摇。Boss 不受影响。"
+icon = ExtResource("2_icon")
+world_scene = ExtResource("3_scene")
+effect_id = &"soul_bell"
+effect_values = {
+"elite_ratio": 0.2,
+"normal_ratio": 0.4
+}
+base_weight = 0.75
+accent = Color(1, 0.82, 0.32, 1)

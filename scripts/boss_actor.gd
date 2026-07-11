@@ -37,6 +37,8 @@ var charge_hit := false
 var summon_timer := 12.0
 var entered_phase_two := false
 var entered_phase_three := false
+var slow_multiplier := 1.0
+var slow_timer := 0.0
 
 
 func setup(new_arena: Node) -> void:
@@ -69,10 +71,14 @@ func _physics_process(delta: float) -> void:
 		arena.summon_minions(5)
 	attack_timer -= delta
 	summon_timer -= delta
+	if slow_timer > 0.0:
+		slow_timer -= delta
+		if slow_timer <= 0.0:
+			slow_multiplier = 1.0
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 220.0 * delta)
 	if charge_time > 0.0:
 		charge_time -= delta
-		velocity = pending_direction * (480.0 + phase * 35.0) + knockback_velocity
+		velocity = pending_direction * (480.0 + phase * 35.0) * slow_multiplier + knockback_velocity
 		_set_animation(&"charge")
 		if not charge_hit and global_position.distance_to(arena.player.global_position) < 58.0:
 			charge_hit = true
@@ -88,7 +94,7 @@ func _physics_process(delta: float) -> void:
 		var direction: Vector2 = global_position.direction_to(arena.player.global_position)
 		var distance := global_position.distance_to(arena.player.global_position)
 		if distance > 105.0:
-			velocity = direction * speed * (1.0 + 0.09 * phase) + knockback_velocity
+			velocity = direction * speed * (1.0 + 0.09 * phase) * slow_multiplier + knockback_velocity
 			pending_direction = direction
 			_set_animation(&"walk")
 		else:
@@ -198,8 +204,9 @@ func take_damage(event: DamageEvent) -> void:
 		_die()
 
 
-func apply_slow(_multiplier: float, _duration: float, _freeze: bool = false) -> void:
-	pass
+func apply_slow(multiplier: float, duration: float, _freeze: bool = false) -> void:
+	slow_multiplier = minf(slow_multiplier, clampf(multiplier, 0.35, 1.0))
+	slow_timer = maxf(slow_timer, duration)
 
 
 func _die() -> void:

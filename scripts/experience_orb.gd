@@ -5,6 +5,7 @@ var arena: Node
 var value := 1
 var velocity := Vector2.ZERO
 var elapsed := 0.0
+var force_magnet := false
 
 
 static func create(new_arena: Node, at_position: Vector2, xp_value: int) -> ExperienceOrb:
@@ -25,13 +26,21 @@ func _process(delta: float) -> void:
 	global_position += velocity * delta
 	var distance := global_position.distance_to(arena.player.global_position)
 	var pickup_range: float = arena.player.pickup_range
-	if distance < pickup_range:
+	if force_magnet or distance < pickup_range:
+		pickup_range = maxf(pickup_range, distance + 1.0) if force_magnet else pickup_range
 		var magnet_speed := remap(clampf(distance, 0.0, pickup_range), pickup_range, 0.0, 120.0, 540.0)
+		if force_magnet:
+			magnet_speed = 900.0
 		global_position = global_position.move_toward(arena.player.global_position, magnet_speed * delta)
 	if distance < 24.0:
 		arena.collect_xp(value)
 		queue_free()
 	queue_redraw()
+
+
+func pull_to_player() -> void:
+	force_magnet = true
+	velocity = Vector2.ZERO
 
 
 func _draw() -> void:

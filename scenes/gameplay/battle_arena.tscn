@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/skill_system.gd" id="4_skills"]
+[ext_resource type="Script" path="res://scripts/item_drop_system.gd" id="5_items"]
 
 [node name="BattleArena" type="Node2D"]
 editor_description = "完整战斗场景：组装地图、玩家、玩法系统及所有运行时对象层。"
@@ -35,3 +36,7 @@ editor_description = "不直接显示的战斗规则和系统容器。"
 [node name="SkillSystem" type="Node" parent="GameplaySystems"]
 editor_description = "自动施放、技能升级和冷却管理。"
 script = ExtResource("4_skills")
+
+[node name="ItemDropSystem" type="Node" parent="GameplaySystems"]
+editor_description = "负责陶罐、精英掉落、四波保底、拾取上限与道具效果。"
+script = ExtResource("5_items")

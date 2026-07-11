@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/item_definition.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/items/Heart.png" id="2_icon"]
+[ext_resource type="PackedScene" path="res://scenes/items/item_pickup.tscn" id="3_scene"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"healing_salve"
+display_name = "金疮药"
+description = "军中常备的止血药。立即恢复 30% 最大生命。"
+icon = ExtResource("2_icon")
+world_scene = ExtResource("3_scene")
+effect_id = &"heal_ratio"
+effect_values = {"health_ratio": 0.3}
+base_weight = 1.0
+accent = Color(0.45, 0.95, 0.55, 1)

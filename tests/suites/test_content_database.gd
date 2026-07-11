@@ -16,7 +16,7 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	database.reload_content()
 
 	context.check(database.validate_all().is_empty(), "ContentDatabase 的资源引用校验通过")
-	context.check(database.content_counts() == {"characters": 5, "skills": 12, "enemies": 4, "waves": 4, "meta_upgrades": 4}, "ContentDatabase 加载五角色、龙胆枪与当前 Demo 内容")
+	context.check(database.content_counts() == {"characters": 5, "skills": 12, "enemies": 4, "waves": 4, "items": 5, "meta_upgrades": 4}, "ContentDatabase 加载五角色、五道具与当前 Demo 内容")
 
 	var expected_skill_ids := [
 		&"black_slash", &"rasengan", &"flying_sword", &"sword_wave", &"orbit_blades",
@@ -31,6 +31,9 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	context.check(int(database.skill(&"rasengan").stats(4).get("split_count")) == 3, "螺旋丸四级保持三枚分裂弹")
 	context.check(database.skill(&"light_step").skill_type == SkillDefinition.SkillType.PASSIVE, "轻身诀保持被动心法类型")
 	context.check(database.skill(&"missing_skill") == null, "未知技能 ID 返回 null")
+	for item_id in [&"healing_salve", &"soul_talisman", &"soul_bell", &"binding_talisman", &"soul_wine"]:
+		var item_definition: ItemDefinition = database.item(item_id)
+		context.check(item_definition != null and item_definition.icon != null and item_definition.world_scene != null, "局内道具 %s 的数据与资源完整" % item_id)
 
 	var expected_enemy_health := {&"corpse": 34.0, &"hound": 24.0, &"lantern": 42.0, &"revenant": 110.0}
 	for enemy_id in expected_enemy_health:

@@ -23,6 +23,8 @@
 - `content_database`：Resource 内容加载、ID、引用完整性、旧数值和 `ContentRegistry` 兼容层。
 - `save_manager`：三档隔离、原子保存、备份恢复、导入导出、GameState 与存档选择 UI。
 - `meta_progression`：夜烬公式、重复提交保护、四条局外养成、全额重置、RunConfig、一次复生与局外大厅 UI。
+- `character_system`：五角色定义、解锁费用与条件、档位隔离、固有特性、龙胆枪、角色卡与素材校验。
+- `item_system`：五种即时效果、陶罐与精英掉落、同屏上限、四波保底、重复增益规则与临时效果 HUD。
 
 ## 编写约定
 
@@ -38,4 +40,18 @@
 
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-meta-progression
+```
+
+## 第 4～5 步人工验收入口
+
+角色入口使用隔离测试存档，提供足够夜烬并开放四名角色的支付解锁资格：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-characters
+```
+
+道具入口直接进入战斗，依次投放五种道具并准备受伤状态、经验球与普通/精英测试目标：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-items
 ```

@@ -12,6 +12,7 @@ signal announcement(text: String, color: Color)
 signal run_ended(victory: bool, elapsed: float, level: int, kills: int)
 signal sfx_requested(id: StringName)
 signal music_requested(id: StringName)
+signal temporary_item_effects_changed(effects: Dictionary)
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
@@ -29,6 +30,7 @@ const ENEMY_SCENES: Dictionary = {
 @onready var projectile_layer: Node2D = $ProjectileLayer
 @onready var effect_layer: Node2D = $EffectLayer
 @onready var skill_system: SkillSystem = $GameplaySystems/SkillSystem
+@onready var item_drop_system: ItemDropSystem = $GameplaySystems/ItemDropSystem
 
 var bounds := Rect2(-1536.0, -864.0, 3072.0, 1728.0)
 var registry := ContentRegistry.new()
@@ -46,10 +48,13 @@ var required_xp := 11
 var pending_levelups := 0
 var spawn_timer := 0.25
 var last_wave_title := ""
+var current_wave_index := 0
 var boss_started := false
 var boss: BossActor
 var projectile_count := 0
 var rng := RandomNumberGenerator.new()
+var temporary_item_effects: Dictionary = {}
+var item_effect_emit_timer := 0.0
 
 
 func _ready() -> void:
@@ -71,6 +76,7 @@ func _ready() -> void:
 	player.apply_run_config(run_config)
 	player.health_changed.connect(func(current: float, maximum: float) -> void: player_health_changed.emit(current, maximum))
 	player.died.connect(_on_player_death)
+	item_drop_system.setup(self, ContentDatabase.all_items())
 	skill_system.setup(self, player, registry.skills, player.initial_skill_id)
 	skill_system.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
 	xp_changed.emit(current_xp, required_xp, player_level)
@@ -83,6 +89,7 @@ func _process(delta: float) -> void:
 	if not run_active:
 		return
 	elapsed += delta
+	_update_temporary_item_effects(delta)
 	stats_changed.emit(elapsed, "鬼面剑豪" if boss_started else last_wave_title, kills)
 	if boss_started:
 		return
@@ -92,6 +99,11 @@ func _process(delta: float) -> void:
 	var wave := registry.wave_for_time(elapsed)
 	if wave == null:
 		return
+	if wave.index != current_wave_index:
+		if current_wave_index > 0:
+			item_drop_system.complete_wave(current_wave_index)
+		current_wave_index = wave.index
+		item_drop_system.start_wave(current_wave_index)
 	if wave.title != last_wave_title:
 		last_wave_title = wave.title
 		announce(wave.title, Color("d9e4ff"))
@@ -167,6 +179,9 @@ func _start_boss() -> void:
 	if boss_started or not run_active:
 		return
 	boss_started = true
+	if current_wave_index > 0:
+		item_drop_system.complete_wave(current_wave_index)
+		current_wave_index = 0
 	var absorbed_xp := 0
 	for enemy in enemies.duplicate():
 		if is_instance_valid(enemy):
@@ -190,6 +205,7 @@ func _start_boss() -> void:
 
 func _on_enemy_defeated(enemy: EnemyActor, xp_value: int, death_position: Vector2) -> void:
 	enemies.erase(enemy)
+	item_drop_system.on_enemy_defeated(enemy, death_position)
 	kills += 1
 	if get_tree().get_nodes_in_group("xp_orbs").size() < 220:
 		var orb := ExperienceOrb.create(self, death_position, xp_value)
@@ -371,3 +387,51 @@ func announce(text: String, color: Color = Color.WHITE) -> void:
 
 func play_sfx(id: StringName) -> void:
 	sfx_requested.emit(id)
+
+
+func activate_temporary_item_effect(id: StringName, values: Dictionary) -> void:
+	var duration := float(values.get("duration", 0.0))
+	if duration <= 0.0:
+		return
+	temporary_item_effects[id] = {
+		"remaining": duration,
+		"duration": duration,
+		"damage": float(values.get("damage", 0.0)),
+		"cooldown_reduction": float(values.get("cooldown_reduction", 0.0)),
+	}
+	temporary_item_effects_changed.emit(temporary_item_effects.duplicate(true))
+
+
+func temporary_item_damage_multiplier() -> float:
+	var multiplier := 1.0
+	for effect in temporary_item_effects.values():
+		multiplier += float(effect.get("damage", 0.0))
+	return multiplier
+
+
+func temporary_item_cooldown_multiplier() -> float:
+	var reduction := 0.0
+	for effect in temporary_item_effects.values():
+		reduction += float(effect.get("cooldown_reduction", 0.0))
+	return maxf(0.45, 1.0 - reduction)
+
+
+func current_temporary_item_effects() -> Dictionary:
+	return temporary_item_effects.duplicate(true)
+
+
+func _update_temporary_item_effects(delta: float) -> void:
+	if temporary_item_effects.is_empty():
+		return
+	var expired: Array[StringName] = []
+	for id in temporary_item_effects:
+		var effect: Dictionary = temporary_item_effects[id]
+		effect["remaining"] = maxf(float(effect.get("remaining", 0.0)) - delta, 0.0)
+		if effect["remaining"] <= 0.0:
+			expired.append(id)
+	for id in expired:
+		temporary_item_effects.erase(id)
+	item_effect_emit_timer -= delta
+	if item_effect_emit_timer <= 0.0 or not expired.is_empty():
+		item_effect_emit_timer = 0.10
+		temporary_item_effects_changed.emit(temporary_item_effects.duplicate(true))

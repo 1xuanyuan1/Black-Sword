@@ -7,6 +7,7 @@ var skills: Dictionary = {}
 var enemies: Dictionary = {}
 var waves: Array[WaveDefinition] = []
 var characters: Dictionary = {}
+var items: Dictionary = {}
 var _database_errors := PackedStringArray()
 
 
@@ -15,6 +16,7 @@ func _init() -> void:
 	skills = database.call("all_skills")
 	enemies = database.call("all_enemies")
 	characters = database.call("all_characters")
+	items = database.call("all_items")
 	for wave_resource in database.call("all_waves"):
 		waves.append(wave_resource as WaveDefinition)
 	_database_errors = database.call("validate_all")
@@ -51,4 +53,6 @@ func validate() -> PackedStringArray:
 		errors.append("敌人类型应为 4")
 	if waves.size() != 4:
 		errors.append("波次数量应为 4")
+	if items.size() != 5:
+		errors.append("局内道具数量应为 5")
 	return errors

@@ -91,7 +91,8 @@ func damage_multiplier() -> float:
 	var meta_multiplier := 1.0
 	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
 		meta_multiplier = (arena.get("run_config") as RunConfig).attack_multiplier
-	return skill_multiplier * meta_multiplier
+	var item_multiplier: float = arena.temporary_item_damage_multiplier() if is_instance_valid(arena) and arena.has_method("temporary_item_damage_multiplier") else 1.0
+	return skill_multiplier * meta_multiplier * item_multiplier
 
 
 func cooldown_multiplier() -> float:
@@ -101,6 +102,8 @@ func cooldown_multiplier() -> float:
 		multiplier -= float(definitions[&"tempered_edge"].stats(level).get("cdr", 0.0))
 	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
 		multiplier *= (arena.get("run_config") as RunConfig).cooldown_multiplier
+	if is_instance_valid(arena) and arena.has_method("temporary_item_cooldown_multiplier"):
+		multiplier *= arena.temporary_item_cooldown_multiplier()
 	return maxf(multiplier, 0.45)
 
 

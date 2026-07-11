@@ -153,7 +153,7 @@ func apply_slow(multiplier: float, duration: float, freeze: bool = false) -> voi
 	if dead:
 		return
 	slow_multiplier = 0.0 if freeze else minf(slow_multiplier, multiplier)
-	slow_timer = maxf(slow_timer, 0.55 if freeze else duration)
+	slow_timer = maxf(slow_timer, duration)
 
 
 func _finish_death() -> void:
