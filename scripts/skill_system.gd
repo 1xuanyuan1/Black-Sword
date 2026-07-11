@@ -23,6 +23,7 @@ var orbit_angle := 0.0
 var orbit_animation_time := 0.0
 var orbit_visuals: Array[Sprite2D] = []
 var dragon_spear_casts := 0
+var nightfall_casts := 0
 var rng := RandomNumberGenerator.new()
 var base_player_max_health := 100.0
 
@@ -44,9 +45,10 @@ func process_skills(delta: float) -> void:
 	if not arena.run_active or player.dead:
 		_clear_orbit_visuals()
 		return
-	var orbit_level: int = levels.get(&"orbit_blades", 0)
+	var orbit_id: StringName = &"wind_god_guard" if inventory.has_skill(&"wind_god_guard") else &"orbit_blades"
+	var orbit_level: int = levels.get(orbit_id, 0)
 	if orbit_level > 0:
-		var orbit_stats: Dictionary = definitions[&"orbit_blades"].stats(orbit_level)
+		var orbit_stats: Dictionary = definitions[orbit_id].stats(orbit_level)
 		var rotation_speed: float = orbit_stats.get("rotation_speed", 2.0)
 		orbit_angle = fposmod(orbit_angle + delta * rotation_speed, TAU)
 		orbit_animation_time += delta * (10.0 + rotation_speed * 2.2)
@@ -82,6 +84,18 @@ func upgrade(id: StringName) -> SkillUpgradeResult:
 
 func can_add_skill(id: StringName) -> bool:
 	return inventory.can_add_skill(id)
+
+
+func apply_evolution(recipe: EvolutionRecipe) -> SkillUpgradeResult:
+	var previous_cooldown: float = cooldowns.get(recipe.active_skill_id, 0.0)
+	var result := inventory.apply_evolution(recipe)
+	if not result.success:
+		return result
+	cooldowns.erase(recipe.active_skill_id)
+	cooldowns[recipe.evolved_skill_id] = previous_cooldown
+	_apply_passives()
+	skills_changed.emit(levels.duplicate(), active_ids.duplicate(), passive_ids.duplicate())
+	return result
 
 
 func damage_multiplier() -> float:
@@ -210,6 +224,104 @@ func _cast_skill(id: StringName) -> void:
 		&"sun_palm": _cast_sun_palm(stats)
 		&"sword_rain": _cast_sword_rain(stats)
 		&"dragon_spear": _cast_dragon_spear(stats)
+		&"nightfall_unbound": _cast_nightfall_unbound(stats)
+		&"flying_thunder_chain": _cast_flying_thunder_chain(stats)
+		&"celestial_sword_river": _cast_celestial_sword_river(stats)
+		&"ten_direction_sword_realm": _cast_ten_direction_sword_realm(stats)
+		&"wind_god_guard": _cast_orbit(stats)
+		&"nine_heavens_thunder_prison": _cast_thunder(stats)
+		&"absolute_frost_domain": _cast_frost(stats)
+		&"boundless_sun": _cast_boundless_sun(stats)
+		&"exorcising_sword_array": _cast_sword_rain(stats)
+		&"seven_in_seven_out": _cast_seven_in_seven_out(stats)
+
+
+func _cast_nightfall_unbound(stats: Dictionary) -> void:
+	nightfall_casts += 1
+	var radius_value := float(stats.get("range", 178.0)) * area_multiplier()
+	var damage := float(stats.get("damage", 82.0)) * damage_multiplier() * melee_damage_multiplier()
+	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.32, "color": Color("eaf4ff")}))
+	for enemy in arena.enemies.duplicate():
+		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
+			enemy.take_damage(make_player_damage_event(damage, player.global_position.direction_to(enemy.global_position), 125.0, [&"slash", &"evolved"]))
+	if nightfall_casts % 3 == 0:
+		_delayed_night_rift(radius_value * 1.25, damage * 0.72)
+	player.play_attack(player.last_direction)
+	arena.play_sfx(&"slash")
+
+
+func _delayed_night_rift(radius_value: float, damage: float) -> void:
+	await get_tree().create_timer(0.22).timeout
+	if not is_instance_valid(player) or not arena.run_active:
+		return
+	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.4, "color": Color("8db8ff")}))
+	for enemy in arena.enemies.duplicate():
+		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
+			enemy.take_damage(make_player_damage_event(damage, player.global_position.direction_to(enemy.global_position), 80.0, [&"rift", &"evolved"]))
+
+
+func _cast_flying_thunder_chain(stats: Dictionary) -> void:
+	var targets: Array = arena.enemies.filter(func(enemy) -> bool: return is_instance_valid(enemy) and not enemy.dead)
+	targets.sort_custom(func(a, b) -> bool: return player.global_position.distance_squared_to(a.global_position) < player.global_position.distance_squared_to(b.global_position))
+	var count := mini(int(stats.get("targets", 3)), targets.size())
+	for index in range(count):
+		var target = targets[index]
+		var radius_value := float(stats.get("radius", 118.0)) * area_multiplier()
+		arena.add_effect(EffectNode.create(&"pulse", target.global_position, {"radius": radius_value, "duration": 0.28, "color": Color("69dcff")}))
+		for enemy in arena.enemies.duplicate():
+			if is_instance_valid(enemy) and not enemy.dead and target.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
+				enemy.take_damage(make_player_damage_event(float(stats.get("damage", 92.0)) * damage_multiplier(), target.global_position.direction_to(enemy.global_position), 95.0, [&"rasengan", &"evolved"]))
+	arena.play_sfx(&"magic")
+
+
+func _cast_celestial_sword_river(stats: Dictionary) -> void:
+	var target = arena.nearest_enemy(player.global_position)
+	if not is_instance_valid(target):
+		cooldowns[&"celestial_sword_river"] = 0.25
+		return
+	var direction := player.global_position.direction_to(target.global_position)
+	var count := int(stats.get("count", 7)) + quantity_bonus()
+	for index in range(count):
+		var angle := (float(index) - float(count - 1) * 0.5) * 0.12
+		arena.add_projectile(CombatProjectile.create({
+			"arena": arena, "owner": player, "position": player.global_position,
+			"direction": direction.rotated(angle), "speed": float(stats.get("speed", 590.0)) * projectile_speed_multiplier(),
+			"damage": float(stats.get("damage", 58.0)) * damage_multiplier(), "radius": 14.0,
+			"pierce": int(stats.get("pierce", 6)) + projectile_pierce_bonus(), "lifetime": 3.0 * projectile_lifetime_multiplier(),
+			"kind": &"sword", "homing": true, "returning": true, "bounces": 3, "knockback": 45.0,
+		}))
+	arena.play_sfx(&"magic")
+
+
+func _cast_ten_direction_sword_realm(stats: Dictionary) -> void:
+	var count := int(stats.get("count", 10))
+	for index in range(count):
+		_spawn_wave(Vector2.from_angle(TAU * float(index) / float(count)), stats)
+
+
+func _cast_boundless_sun(stats: Dictionary) -> void:
+	_cast_sun_palm(stats)
+	var nearby := 0
+	var radius_value := float(stats.get("radius", 205.0)) * area_multiplier()
+	for enemy in arena.enemies:
+		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
+			nearby += 1
+	if nearby > 0:
+		player.heal(minf(player.max_health * float(stats.get("heal_ratio", 0.025)) * nearby, player.max_health * 0.10))
+
+
+func _cast_seven_in_seven_out(stats: Dictionary) -> void:
+	player.invulnerability = maxf(player.invulnerability, float(stats.get("invulnerability", 0.55)))
+	var count := int(stats.get("count", 7))
+	var base_direction := player.last_direction
+	var target = arena.nearest_enemy(player.global_position)
+	if is_instance_valid(target):
+		base_direction = player.global_position.direction_to(target.global_position)
+	for index in range(count):
+		var spread := remap(float(index), 0.0, float(maxi(count - 1, 1)), -1.25, 1.25)
+		_perform_dragon_spear(base_direction.rotated(spread), stats)
+	player.play_attack(base_direction)
+	arena.play_sfx(&"slash")
 
 
 func _cast_rasengan(stats: Dictionary) -> void:

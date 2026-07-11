@@ -6,6 +6,7 @@ const ENEMY_DEFINITION_SCRIPT := preload("res://scripts/data/enemy_definition.gd
 const WAVE_DEFINITION_SCRIPT := preload("res://scripts/data/wave_definition.gd")
 const ITEM_DEFINITION_SCRIPT := preload("res://scripts/data/item_definition.gd")
 const META_UPGRADE_DEFINITION_SCRIPT := preload("res://scripts/data/meta_upgrade_definition.gd")
+const EVOLUTION_RECIPE_SCRIPT := preload("res://scripts/data/evolution_recipe.gd")
 
 const CHARACTER_DIRECTORY := "res://data/characters"
 const SKILL_DIRECTORY := "res://data/skills"
@@ -13,6 +14,7 @@ const ENEMY_DIRECTORY := "res://data/enemies"
 const WAVE_DIRECTORY := "res://data/waves"
 const ITEM_DIRECTORY := "res://data/items"
 const META_UPGRADE_DIRECTORY := "res://data/meta"
+const EVOLUTION_DIRECTORY := "res://data/evolutions"
 
 var _characters: Dictionary = {}
 var _skills: Dictionary = {}
@@ -20,6 +22,7 @@ var _enemies: Dictionary = {}
 var _waves: Array[WaveDefinition] = []
 var _items: Dictionary = {}
 var _meta_upgrades: Dictionary = {}
+var _evolutions: Dictionary = {}
 var _load_errors := PackedStringArray()
 
 
@@ -36,6 +39,7 @@ func reload_content() -> void:
 	_waves.clear()
 	_items.clear()
 	_meta_upgrades.clear()
+	_evolutions.clear()
 	_load_errors.clear()
 	_load_indexed_resources(CHARACTER_DIRECTORY, CHARACTER_DEFINITION_SCRIPT, _characters)
 	_load_indexed_resources(SKILL_DIRECTORY, SKILL_DEFINITION_SCRIPT, _skills)
@@ -43,6 +47,7 @@ func reload_content() -> void:
 	_load_waves()
 	_load_indexed_resources(ITEM_DIRECTORY, ITEM_DEFINITION_SCRIPT, _items)
 	_load_indexed_resources(META_UPGRADE_DIRECTORY, META_UPGRADE_DEFINITION_SCRIPT, _meta_upgrades)
+	_load_indexed_resources(EVOLUTION_DIRECTORY, EVOLUTION_RECIPE_SCRIPT, _evolutions)
 	_load_errors.append_array(_validate_references())
 
 
@@ -73,6 +78,18 @@ func item(id: StringName) -> ItemDefinition:
 	return _items.get(id) as ItemDefinition
 
 
+func evolution(id: StringName) -> EvolutionRecipe:
+	return _evolutions.get(id) as EvolutionRecipe
+
+
+func evolution_for_active(id: StringName) -> EvolutionRecipe:
+	for value in _evolutions.values():
+		var recipe := value as EvolutionRecipe
+		if recipe.active_skill_id == id:
+			return recipe
+	return null
+
+
 func all_characters() -> Dictionary:
 	return _characters.duplicate()
 
@@ -97,6 +114,10 @@ func all_items() -> Dictionary:
 	return _items.duplicate()
 
 
+func all_evolutions() -> Dictionary:
+	return _evolutions.duplicate()
+
+
 func validate_all() -> PackedStringArray:
 	return _load_errors.duplicate()
 
@@ -109,6 +130,7 @@ func content_counts() -> Dictionary:
 		"waves": _waves.size(),
 		"items": _items.size(),
 		"meta_upgrades": _meta_upgrades.size(),
+		"evolutions": _evolutions.size(),
 	}
 
 
@@ -186,14 +208,36 @@ func _validate_references() -> PackedStringArray:
 			errors.append("技能 %s 的等级数据与 max_level 不一致" % skill_definition.id)
 	var active_skill_count := 0
 	var passive_skill_count := 0
+	var evolved_skill_count := 0
 	for definition in _skills.values():
 		var skill_definition := definition as SkillDefinition
 		if skill_definition.skill_type == SkillDefinition.SkillType.ACTIVE:
 			active_skill_count += 1
 		elif skill_definition.skill_type == SkillDefinition.SkillType.PASSIVE:
 			passive_skill_count += 1
-	if active_skill_count != 10 or passive_skill_count != 10:
-		errors.append("V1 技能池必须为 10 主动 + 10 心法")
+		elif skill_definition.skill_type == SkillDefinition.SkillType.EVOLVED:
+			evolved_skill_count += 1
+	if active_skill_count != 10 or passive_skill_count != 10 or evolved_skill_count != 10:
+		errors.append("V1 技能池必须为 10 主动 + 10 心法 + 10 进阶")
+	var used_actives := {}
+	var used_evolved := {}
+	for value in _evolutions.values():
+		var recipe := value as EvolutionRecipe
+		var active := _skills.get(recipe.active_skill_id) as SkillDefinition
+		var passive := _skills.get(recipe.passive_skill_id) as SkillDefinition
+		var evolved := _skills.get(recipe.evolved_skill_id) as SkillDefinition
+		if active == null or active.skill_type != SkillDefinition.SkillType.ACTIVE:
+			errors.append("进阶配方 %s 的主动引用无效" % recipe.id)
+		if passive == null or passive.skill_type != SkillDefinition.SkillType.PASSIVE:
+			errors.append("进阶配方 %s 的心法引用无效" % recipe.id)
+		if evolved == null or evolved.skill_type != SkillDefinition.SkillType.EVOLVED:
+			errors.append("进阶配方 %s 的进阶引用无效" % recipe.id)
+		if used_actives.has(recipe.active_skill_id):
+			errors.append("主动技能存在重复进阶配方：%s" % recipe.active_skill_id)
+		if used_evolved.has(recipe.evolved_skill_id):
+			errors.append("进阶技能被多个配方引用：%s" % recipe.evolved_skill_id)
+		used_actives[recipe.active_skill_id] = true
+		used_evolved[recipe.evolved_skill_id] = true
 	for definition in _enemies.values():
 		var enemy_definition := definition as EnemyDefinition
 		if enemy_definition.actor_scene == null:

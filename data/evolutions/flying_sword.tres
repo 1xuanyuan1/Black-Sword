@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="EvolutionRecipe" format=3]
+[ext_resource type="Script" path="res://scripts/data/evolution_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"evolve_flying_sword"
+active_skill_id = &"flying_sword"
+passive_skill_id = &"sword_control"
+evolved_skill_id = &"celestial_sword_river"

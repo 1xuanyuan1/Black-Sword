@@ -13,6 +13,7 @@ signal run_ended(victory: bool, elapsed: float, level: int, kills: int)
 signal sfx_requested(id: StringName)
 signal music_requested(id: StringName)
 signal temporary_item_effects_changed(effects: Dictionary)
+signal evolution_requested(chest_id: StringName, options: Array[EvolutionRecipe])
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
@@ -31,6 +32,7 @@ const ENEMY_SCENES: Dictionary = {
 @onready var effect_layer: Node2D = $EffectLayer
 @onready var skill_controller: SkillController = $GameplaySystems/SkillController
 @onready var item_drop_system: ItemDropSystem = $GameplaySystems/ItemDropSystem
+@onready var evolution_system: EvolutionSystem = $GameplaySystems/EvolutionSystem
 
 var skill_system: SkillController:
 	get:
@@ -83,6 +85,8 @@ func _ready() -> void:
 	item_drop_system.setup(self, ContentDatabase.all_items())
 	skill_controller.setup(self, player, registry.skills, player.initial_skill_id)
 	skill_controller.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
+	evolution_system.setup(self, skill_controller, ContentDatabase.all_evolutions())
+	evolution_system.evolution_available.connect(func(chest_id: StringName, options: Array[EvolutionRecipe]) -> void: evolution_requested.emit(chest_id, options))
 	xp_changed.emit(current_xp, required_xp, player_level)
 	player_health_changed.emit(player.health, player.max_health)
 	announce("第一夜·尸行", Color("d9e4ff"))
@@ -278,6 +282,10 @@ func choose_upgrade(id: StringName) -> void:
 	complete_levelup()
 
 
+func choose_evolution(chest_id: StringName, evolved_skill_id: StringName) -> SkillUpgradeResult:
+	return evolution_system.apply_evolution(chest_id, evolved_skill_id)
+
+
 func finish_run_as_failure() -> void:
 	if not run_active:
 		return
@@ -307,6 +315,7 @@ func _build_run_result(victory: bool) -> RunResult:
 	result.final_boss_kill = victory
 	result.kills = kills
 	result.player_level = player_level
+	result.evolved_skill_ids.assign(skill_controller.inventory.evolved_ids.values())
 	return result
 
 

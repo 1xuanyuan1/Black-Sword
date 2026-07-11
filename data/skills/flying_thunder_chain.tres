@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"flying_thunder_chain"
+display_name = "飞雷神·螺旋连闪"
+description = "在标记目标间连续引爆螺旋冲击。"
+skill_type = 2
+max_level = 1
+accent = Color(0.4, 0.86, 1, 1)
+values = Array[Dictionary]([{"cooldown": 0.82, "damage": 92.0, "radius": 118.0, "targets": 3, "upgrade": "进阶招式"}])

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"nightfall_unbound"
+display_name = "断夜·无明"
+description = "剑弧化为环斩，每三次释放追加裂空斩。"
+skill_type = 2
+max_level = 1
+accent = Color(0.9, 0.94, 1, 1)
+values = Array[Dictionary]([{"cooldown": 0.52, "damage": 82.0, "range": 178.0, "upgrade": "进阶招式"}])

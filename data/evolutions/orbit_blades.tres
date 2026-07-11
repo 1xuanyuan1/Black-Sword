@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="EvolutionRecipe" format=3]
+[ext_resource type="Script" path="res://scripts/data/evolution_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"evolve_orbit_blades"
+active_skill_id = &"orbit_blades"
+passive_skill_id = &"light_step"
+evolved_skill_id = &"wind_god_guard"

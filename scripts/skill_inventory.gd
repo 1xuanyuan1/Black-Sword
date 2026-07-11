@@ -87,6 +87,29 @@ func has_skill(id: StringName) -> bool:
 	return level_of(id) > 0
 
 
+func can_evolve(recipe: EvolutionRecipe) -> bool:
+	if recipe == null or not definitions.has(recipe.evolved_skill_id):
+		return false
+	if level_of(recipe.active_skill_id) < 5 or level_of(recipe.passive_skill_id) <= 0:
+		return false
+	if recipe.active_skill_id not in active_ids or evolved_ids.has(recipe.active_skill_id):
+		return false
+	var evolved := definitions[recipe.evolved_skill_id] as SkillDefinition
+	return evolved != null and evolved.skill_type == SkillDefinition.SkillType.EVOLVED
+
+
+func apply_evolution(recipe: EvolutionRecipe) -> SkillUpgradeResult:
+	if not can_evolve(recipe):
+		return SkillUpgradeResult.failure(recipe.evolved_skill_id if recipe != null else &"", &"requirements_not_met")
+	var slot_index := active_ids.find(recipe.active_skill_id)
+	if slot_index < 0:
+		return SkillUpgradeResult.failure(recipe.evolved_skill_id, &"active_missing")
+	active_ids[slot_index] = recipe.evolved_skill_id
+	evolved_ids[recipe.active_skill_id] = recipe.evolved_skill_id
+	levels[recipe.evolved_skill_id] = 1
+	return SkillUpgradeResult.upgraded(recipe.evolved_skill_id, 0, 1, false)
+
+
 func _shuffle(values: Array[SkillDefinition], random: RandomNumberGenerator) -> void:
 	for index in range(values.size() - 1, 0, -1):
 		var other := random.randi_range(0, index)

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"wind_god_guard"
+display_name = "风神护体"
+description = "内外双环常驻，周期释放外扩风刃。"
+skill_type = 2
+max_level = 1
+accent = Color(0.55, 1, 0.9, 1)
+values = Array[Dictionary]([{"cooldown": 0.24, "count": 6, "inner_count": 4, "damage": 39.0, "radius": 118.0, "rotation_speed": 4.2, "upgrade": "进阶招式"}])

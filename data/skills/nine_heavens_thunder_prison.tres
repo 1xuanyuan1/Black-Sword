@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"nine_heavens_thunder_prison"
+display_name = "九霄雷狱"
+description = "在敌群中心形成持续连锁的雷霆领域。"
+skill_type = 2
+max_level = 1
+accent = Color(1, 0.91, 0.35, 1)
+values = Array[Dictionary]([{"cooldown": 1.65, "chains": 12, "damage": 86.0, "starts": 3, "upgrade": "进阶招式"}])

@@ -39,6 +39,7 @@ var boss_panel: PanelContainer
 var boss_bar: ProgressBar
 var boss_value_label: Label
 var announcement_label: Label
+var chest_label: Label
 var movement_joystick: MovementJoystick
 var touch_pause_button: Button
 var modal_overlay: Control
@@ -52,6 +53,9 @@ var hub_open := false
 var selected_character_id: StringName = &"black_sword"
 var orientation_pause_active := false
 var current_run_result: RunResult
+var evolution_options: Array[EvolutionRecipe] = []
+var evolution_chest_id: StringName
+var evolving := false
 
 
 func _ready() -> void:
@@ -112,6 +116,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-skills" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_skills")
+	elif "--qa-evolutions" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_evolutions")
 
 
 func _process(_delta: float) -> void:
@@ -186,6 +193,29 @@ func _qa_prepare_skills() -> void:
 	arena.announce("QA 技能验收：已填满 6 主动 + 6 心法", Color("ffd38a"))
 	await get_tree().create_timer(0.45).timeout
 	arena.collect_xp(arena.required_xp)
+
+
+func _qa_prepare_evolutions() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.35).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.spawn_timer = 9999.0
+	var pairs := [
+		[&"black_slash", &"tempered_edge"],
+		[&"rasengan", &"spacetime_formula"],
+		[&"flying_sword", &"sword_control"],
+		[&"dragon_spear", &"battlefield_tactics"],
+	]
+	for pair in pairs:
+		for _rank in range(5):
+			arena.skill_controller.upgrade(pair[0])
+		arena.skill_controller.upgrade(pair[1])
+	for offset in [Vector2(-120, 130), Vector2(0, 170), Vector2(120, 130)]:
+		arena.evolution_system.spawn_chest(arena.player.global_position + offset)
+	arena.announce("QA 进阶验收：四套配方就绪，地图有三个永久宝匣", Color("ffd76a"))
 
 
 func _qa_show_meta_progression() -> void:
@@ -324,6 +354,9 @@ func _style_box(fill: Color, border: Color, width: int, radius: int, content: in
 
 func _clear_ui() -> void:
 	_release_virtual_movement()
+	evolving = false
+	evolution_options.clear()
+	evolution_chest_id = &""
 	for child in ui_root.get_children():
 		child.queue_free()
 	modal_overlay = null
@@ -1050,6 +1083,7 @@ func _refresh_hud_from_arena() -> void:
 	_update_xp(arena.current_xp, arena.required_xp, arena.player_level)
 	_update_skills(arena.skill_system.levels, arena.skill_system.active_ids, arena.skill_system.passive_ids)
 	_update_temporary_item_effects(arena.current_temporary_item_effects())
+	_update_chest_count()
 
 
 func _connect_arena() -> void:
@@ -1059,6 +1093,9 @@ func _connect_arena() -> void:
 	arena.skills_changed.connect(_update_skills)
 	arena.temporary_item_effects_changed.connect(_update_temporary_item_effects)
 	arena.level_up_requested.connect(_show_level_up)
+	arena.evolution_requested.connect(_show_evolution)
+	arena.evolution_system.chest_spawned.connect(func(_id: StringName) -> void: _update_chest_count())
+	arena.evolution_system.evolution_applied.connect(func(_chest: StringName, _skill: StringName) -> void: _update_chest_count())
 	arena.boss_spawned.connect(_show_boss)
 	arena.boss_health_changed.connect(_update_boss_health)
 	arena.announcement.connect(_show_announcement)
@@ -1179,6 +1216,14 @@ func _build_hud() -> void:
 	announcement_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	announcement_label.modulate.a = 0.0
 	hud_root.add_child(announcement_label)
+	chest_label = _label("悟道宝匣 0", 16, Color("d7c58a"))
+	chest_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	chest_label.offset_left = -250
+	chest_label.offset_top = 198
+	chest_label.offset_right = -24
+	chest_label.offset_bottom = 230
+	chest_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hud_root.add_child(chest_label)
 	movement_joystick = VIRTUAL_JOYSTICK_SCENE.instantiate() as MovementJoystick
 	movement_joystick.visible = _touch_controls_supported()
 	movement_joystick.direction_changed.connect(_on_virtual_movement_changed)
@@ -1395,8 +1440,70 @@ func _choose_level_option(index: int) -> void:
 	_set_touch_movement_enabled(true)
 
 
+func _show_evolution(chest_id: StringName, options: Array[EvolutionRecipe]) -> void:
+	if not game_running or options.is_empty() or evolving:
+		return
+	evolving = true
+	evolution_chest_id = chest_id
+	evolution_options = options
+	_release_virtual_movement()
+	_set_touch_movement_enabled(false)
+	get_tree().paused = true
+	_play_sfx(&"level_up")
+	modal_overlay = _modal_background()
+	ui_root.add_child(modal_overlay)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -540
+	panel.offset_top = -260
+	panel.offset_right = 540
+	panel.offset_bottom = 260
+	modal_overlay.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 16)
+	panel.add_child(box)
+	var title := _label("悟道宝匣 · 招式进阶", 34, Color("ffe29a"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	var cards := HBoxContainer.new()
+	cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards.add_theme_constant_override("separation", 20)
+	box.add_child(cards)
+	for index in range(options.size()):
+		var recipe := options[index]
+		var evolved := ContentDatabase.skill(recipe.evolved_skill_id)
+		var original := ContentDatabase.skill(recipe.active_skill_id)
+		var card := _button("%s\n\n%s → %s\n\n%s" % [index + 1, original.display_name, evolved.display_name, evolved.description], Vector2(310, 350))
+		card.add_theme_font_size_override("font_size", 20)
+		card.add_theme_color_override("font_color", evolved.accent)
+		card.pressed.connect(_choose_evolution.bind(index))
+		cards.add_child(card)
+
+
+func _choose_evolution(index: int) -> void:
+	if not evolving or index < 0 or index >= evolution_options.size():
+		return
+	var recipe := evolution_options[index]
+	var result := arena.choose_evolution(evolution_chest_id, recipe.evolved_skill_id)
+	if not result.success:
+		return
+	evolving = false
+	evolution_options.clear()
+	evolution_chest_id = &""
+	if is_instance_valid(modal_overlay):
+		modal_overlay.queue_free()
+	modal_overlay = null
+	get_tree().paused = false
+	_set_touch_movement_enabled(true)
+
+
+func _update_chest_count() -> void:
+	if is_instance_valid(chest_label) and is_instance_valid(arena):
+		chest_label.text = "悟道宝匣 %d" % arena.evolution_system.chests.size()
+
+
 func _toggle_pause() -> void:
-	if not game_running or leveling:
+	if not game_running or leveling or evolving:
 		return
 	if pause_open:
 		pause_open = false
@@ -1473,6 +1580,7 @@ func _show_announcement(text: String, color: Color) -> void:
 func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void:
 	game_running = false
 	leveling = false
+	evolving = false
 	pause_open = false
 	_release_virtual_movement()
 	_set_touch_movement_enabled(false)

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"seven_in_seven_out"
+display_name = "七进七出·龙胆"
+description = "向七个威胁方向连续刺出枪影，发动时短暂无敌。"
+skill_type = 2
+max_level = 1
+accent = Color(0.72, 0.9, 1, 1)
+values = Array[Dictionary]([{"cooldown": 0.62, "count": 7, "damage": 94.0, "distance": 280.0, "width": 40.0, "pierce": 14, "invulnerability": 0.55, "upgrade": "进阶招式"}])

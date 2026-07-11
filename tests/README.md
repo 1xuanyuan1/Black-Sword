@@ -26,6 +26,7 @@
 - `character_system`：五角色定义、解锁费用与条件、档位隔离、固有特性、龙胆枪、角色卡与素材校验。
 - `item_system`：五种即时效果、陶罐与精英掉落、同屏上限、四波保底、重复增益规则与临时效果 HUD。
 - `skill_inventory`：10+10 内容、6+6 槽位、候选过滤、五级心法属性聚合与双排 HUD。
+- `evolution_system`：十套配方、进阶条件、原槽替换、冷却继承、永久宝匣、三选一与单局三次上限。
 
 ## 编写约定
 
@@ -61,4 +62,10 @@
 
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-skills
+```
+
+进阶入口准备四套合法配方与三个永久宝匣，靠近宝匣即可测试进阶三选一：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-evolutions
 ```

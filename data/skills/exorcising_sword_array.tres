@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"exorcising_sword_array"
+display_name = "诛邪万剑阵"
+description = "剑雨轮换覆盖敌阵，最后降下中心巨剑。"
+skill_type = 2
+max_level = 1
+accent = Color(0.88, 0.8, 1, 1)
+values = Array[Dictionary]([{"cooldown": 2.8, "count": 24, "damage": 76.0, "radius": 220.0, "giant": true, "upgrade": "进阶招式"}])

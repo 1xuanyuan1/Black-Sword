@@ -61,7 +61,7 @@ func _run_baseline() -> void:
 	var rasengan_level_three: Dictionary = rasengan_definition.stats(3)
 	var rasengan_level_four: Dictionary = rasengan_definition.stats(4)
 	var rasengan_level_five: Dictionary = rasengan_definition.stats(5)
-	_check(registry.validate().is_empty(), "内容注册表包含 20 个五级技能、5 名角色、4 类敌人与 4 个波次")
+	_check(registry.validate().is_empty(), "内容注册表包含 10+10+10 技能、5 名角色、4 类敌人与 4 个波次")
 	_check_actor_preset("res://scenes/actors/player.tscn", "PlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_minato.tscn", "MinatoPlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_ning_shuanghua.tscn", "NingShuanghuaPlayerCharacter", "res://scripts/player_actor.gd")

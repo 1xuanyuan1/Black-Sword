@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ten_direction_sword_realm"
+display_name = "十方剑界"
+description = "向十方释放可反弹的贯穿剑气。"
+skill_type = 2
+max_level = 1
+accent = Color(0.74, 0.96, 1, 1)
+values = Array[Dictionary]([{"cooldown": 1.35, "count": 10, "damage": 46.0, "speed": 580.0, "pierce": 12, "width": 34.0, "upgrade": "进阶招式"}])

@@ -191,6 +191,8 @@ enum SkillType { ACTIVE, PASSIVE, EVOLVED }
 
 V1 心法稳定 ID 为：`tempered_edge`、`spacetime_formula`、`sword_control`、`formation_breaking`、`light_step`、`thunder_seal`、`mystic_yin`、`pure_yang`、`sword_casket`、`battlefield_tactics`。这些 ID 将被进阶配方引用，进入正式数据后不得改作其他含义。
 
+V1 进阶稳定 ID 为：`nightfall_unbound`、`flying_thunder_chain`、`celestial_sword_river`、`ten_direction_sword_realm`、`wind_god_guard`、`nine_heavens_thunder_prison`、`absolute_frost_domain`、`boundless_sun`、`exorcising_sword_array`、`seven_in_seven_out`。
+
 ### 6.3 `EvolutionRecipe : Resource`
 
 ```gdscript

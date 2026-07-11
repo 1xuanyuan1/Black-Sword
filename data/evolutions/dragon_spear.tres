@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="EvolutionRecipe" format=3]
+[ext_resource type="Script" path="res://scripts/data/evolution_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"evolve_dragon_spear"
+active_skill_id = &"dragon_spear"
+passive_skill_id = &"battlefield_tactics"
+evolved_skill_id = &"seven_in_seven_out"
