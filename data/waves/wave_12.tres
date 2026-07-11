@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+index = 12
+title = "第十二响·剑豪"
+start_time = 665.0
+end_time = 755.0
+spawn_interval = 0.75
+enemy_weights = {&"corpse": 0.34, &"revenant": 0.33, &"rogue_monk": 0.33}
+enemy_cap = 70
+kind = 2
+target_duration = 75.0
+rest_duration = 0.0
+boss_id = &"ghost_swordsman"

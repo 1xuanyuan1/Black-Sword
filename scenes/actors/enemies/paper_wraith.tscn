@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+[ext_resource type="Script" path="res://scripts/enemy_actor.gd" id="1_enemy"]
+[ext_resource type="Script" path="res://scripts/actor_visual.gd" id="2_visual"]
+[sub_resource type="CircleShape2D" id="1"]
+radius = 11.0
+[node name="PaperWraithEnemy" type="CharacterBody2D"]
+script = ExtResource("1_enemy")
+enemy_id = &"paper_wraith"
+[node name="CharacterVisual" type="Node2D" parent="."]
+script = ExtResource("2_visual")
+[node name="CharacterSprite" type="Sprite2D" parent="CharacterVisual"]
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

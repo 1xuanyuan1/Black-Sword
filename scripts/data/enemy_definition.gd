@@ -15,6 +15,8 @@ extends Resource
 @export var behavior: StringName
 @export var scale_factor: float = 3.5
 @export var tint: Color = Color.WHITE
+@export var enemy_class: StringName = &"normal"
+@export var tags: Array[StringName] = []
 
 
 static func create(data: Dictionary) -> EnemyDefinition:

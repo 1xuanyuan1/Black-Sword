@@ -119,6 +119,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-evolutions" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_evolutions")
+	elif "--qa-waves" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_waves")
 
 
 func _process(_delta: float) -> void:
@@ -216,6 +219,20 @@ func _qa_prepare_evolutions() -> void:
 	for offset in [Vector2(-120, 130), Vector2(0, 170), Vector2(120, 130)]:
 		arena.evolution_system.spawn_chest(arena.player.global_position + offset)
 	arena.announce("QA 进阶验收：四套配方就绪，地图有三个永久宝匣", Color("ffd76a"))
+
+
+func _qa_prepare_waves() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.25).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.player.invulnerability = 9999.0
+	arena.set_meta("qa_auto_level", true)
+	arena.wave_director.duration_scale = 0.05
+	arena.spawn_director.qa_auto_defeat_bosses = true
+	arena.announce("QA 十二波加速：普通波 2.5 秒，小 Boss 自动验收", Color("ffd38a"))
 
 
 func _qa_show_meta_progression() -> void:

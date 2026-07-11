@@ -1,17 +1,14 @@
 [gd_resource type="Resource" script_class="WaveDefinition" format=3]
-
-[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1_g83dp"]
-
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
 [resource]
-script = ExtResource("1_g83dp")
+script = ExtResource("1")
 index = 2
-title = "第二夜·犬影"
-start_time = 90.0
-end_time = 180.0
-spawn_interval = 0.56
-enemy_weights = {
-&"corpse": 0.62,
-&"hound": 0.38
-}
-enemy_cap = 75
-elite_chance = 0.03
+title = "第二响·犬影"
+start_time = 55.0
+end_time = 105.0
+spawn_interval = 0.64
+enemy_weights = {&"corpse": 0.62, &"hound": 0.38}
+enemy_cap = 60
+elite_chance = 0.04
+target_duration = 50.0
+unlock_zone_id = &"withered_forest"

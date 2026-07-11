@@ -1,19 +1,15 @@
 [gd_resource type="Resource" script_class="WaveDefinition" format=3]
-
-[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1_bni2j"]
-
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
 [resource]
-script = ExtResource("1_bni2j")
+script = ExtResource("1")
 index = 4
-title = "第四夜·怨军"
-start_time = 270.0
-end_time = 390.0
-spawn_interval = 0.25
-enemy_weights = {
-&"corpse": 0.27,
-&"hound": 0.23,
-&"lantern": 0.24,
-&"revenant": 0.26
-}
-enemy_cap = 145
-elite_chance = 0.14
+title = "第四响·鬼灯"
+start_time = 185.0
+end_time = 235.0
+spawn_interval = 0.55
+enemy_weights = {&"corpse": 0.55, &"lantern": 0.45}
+enemy_cap = 75
+elite_chance = 0.06
+target_duration = 50.0
+unlock_zone_id = &"sutra_library"
+environment_event_ids = Array[StringName]([&"curse_lanterns"])

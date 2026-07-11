@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/miniboss_actor.gd" id="1"]
+[sub_resource type="CircleShape2D" id="1"]
+radius = 32.0
+[node name="IronArmMonk" type="CharacterBody2D"]
+script = ExtResource("1")
+boss_id = &"iron_arm_monk"
+display_name = "铁臂怨僧"
+max_health = 1750.0
+move_speed = 70.0
+tint = Color(0.55, 0.42, 0.3, 1)
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

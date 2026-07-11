@@ -218,6 +218,8 @@ V1 进阶稳定 ID 为：`nightfall_unbound`、`flying_thunder_chain`、`celesti
 
 精英词缀是生成时附加的 `EliteModifier`，不复制整份敌人定义。小 Boss 与 Boss 使用独立定义和状态机场景。
 
+V1 新增普通敌人稳定 ID 为 `paper_wraith`、`rogue_monk`；三名小 Boss 稳定 ID 为 `bone_corpse_king`、`red_lantern_lady`、`iron_arm_monk`。精英词缀 ID 为 `blood` 与 `swift`。
+
 ### 6.5 `WaveDefinition : Resource`
 
 ```gdscript

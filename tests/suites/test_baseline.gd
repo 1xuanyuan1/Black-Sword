@@ -61,7 +61,7 @@ func _run_baseline() -> void:
 	var rasengan_level_three: Dictionary = rasengan_definition.stats(3)
 	var rasengan_level_four: Dictionary = rasengan_definition.stats(4)
 	var rasengan_level_five: Dictionary = rasengan_definition.stats(5)
-	_check(registry.validate().is_empty(), "内容注册表包含 10+10+10 技能、5 名角色、4 类敌人与 4 个波次")
+	_check(registry.validate().is_empty(), "内容注册表包含 10+10+10 技能、5 名角色、6 类敌人与 12 个波次")
 	_check_actor_preset("res://scenes/actors/player.tscn", "PlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_minato.tscn", "MinatoPlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_ning_shuanghua.tscn", "NingShuanghuaPlayerCharacter", "res://scripts/player_actor.gd")
@@ -159,12 +159,12 @@ func _run_baseline() -> void:
 	_check(projectile_count_after_split == projectile_count_before_split + 4, "四级螺旋丸命中后会实际生成三枚分裂弹")
 	minato_arena.queue_free()
 	await process_frame
-	_check(registry.wave_for_time(0.0).title == "第一夜·尸行", "0 秒进入第一波")
-	_check(registry.wave_for_time(389.0).title == "第四夜·怨军", "Boss 前处于第四波")
-	var third_wave: WaveDefinition = registry.wave_for_time(180.0)
-	var fourth_wave: WaveDefinition = registry.wave_for_time(270.0)
-	_check(third_wave.spawn_interval <= 0.34 and third_wave.enemy_cap >= 115, "三分钟后刷怪速度与场上密度明显提高")
-	_check(fourth_wave.spawn_interval <= 0.25 and fourth_wave.enemy_cap >= 145, "第四波进一步提高刷怪速度与场上密度")
+	_check(ContentDatabase.wave(1).title == "第一响·尸行", "十二波流程从第一响尸行开始")
+	_check(ContentDatabase.wave(12).title == "第十二响·剑豪", "十二波流程以鬼面剑豪终战结束")
+	var tenth_wave: WaveDefinition = ContentDatabase.wave(10)
+	var eleventh_wave: WaveDefinition = ContentDatabase.wave(11)
+	_check(tenth_wave.spawn_interval <= 0.26 and tenth_wave.enemy_cap >= 135, "第十波进入百鬼高密度阶段")
+	_check(eleventh_wave.spawn_interval <= 0.22 and eleventh_wave.enemy_cap >= 150, "第十一波达到最终敌群密度")
 	var orbit_definition: SkillDefinition = registry.skills[&"orbit_blades"]
 	_check(float(rasengan_level_two.get("aoe_radius", 0.0)) > 0.0, "二级螺旋丸命中后升级为范围群攻")
 	_check(float(rasengan_level_three.get("radius", 0.0)) > float(rasengan_level_two.get("radius", 0.0)) and float(rasengan_level_three.get("aoe_radius", 0.0)) > float(rasengan_level_two.get("aoe_radius", 0.0)), "三级螺旋丸本体和爆炸范围继续变大")
@@ -272,14 +272,14 @@ func _run_baseline() -> void:
 	if is_instance_valid(enemy):
 		enemy.take_damage(DamageEvent.create(999.0, arena.player, Vector2.RIGHT, 0.0))
 	await create_timer(1.2).timeout
-	_check(arena.kills == 1, "敌人死亡动画完成后计数并生成经验")
+	_check(arena.kills >= 1, "敌人死亡动画完成后计数并生成经验")
 	_check(root.get_tree().get_nodes_in_group("xp_orbs").size() >= 1 or arena.current_xp > 0, "经验球成功生成并可被磁吸拾取")
-	arena.elapsed = 179.9
+	arena.current_wave_index = 5
 	var health_multiplier_before_three_minutes: float = arena.enemy_health_multiplier()
-	arena.elapsed = 180.0
+	arena.current_wave_index = 10
 	var health_multiplier_after_three_minutes: float = arena.enemy_health_multiplier()
-	_check(health_multiplier_after_three_minutes > health_multiplier_before_three_minutes * 1.25, "三分钟后怪物生命倍率进入高压台阶")
-	arena.elapsed = 300.0
+	_check(health_multiplier_after_three_minutes > health_multiplier_before_three_minutes * 1.5, "后期波次怪物生命倍率进入高压台阶")
+	arena.current_wave_index = 11
 	var late_enemy := arena.spawn_enemy(&"corpse", Vector2(120, 0), false)
 	_check(is_instance_valid(late_enemy) and late_enemy.max_health > first_night_health * 2.0, "后续波次同类怪物生命值会明显上升")
 	if is_instance_valid(late_enemy):

@@ -2,14 +2,14 @@
 [ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
 [resource]
 script = ExtResource("1")
-index = 3
-title = "第三响·骨王"
-start_time = 110.0
-end_time = 180.0
-spawn_interval = 0.72
-enemy_weights = {&"corpse": 1.0}
-enemy_cap = 55
-elite_chance = 0.03
+index = 9
+title = "第九响·铁臂"
+start_time = 480.0
+end_time = 550.0
+spawn_interval = 0.4
+enemy_weights = {&"rogue_monk": 0.55, &"revenant": 0.45}
+enemy_cap = 100
+elite_chance = 0.14
 kind = 1
 target_duration = 65.0
-boss_id = &"bone_corpse_king"
+boss_id = &"iron_arm_monk"

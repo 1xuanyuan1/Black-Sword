@@ -1,14 +1,12 @@
 [gd_resource type="Resource" script_class="WaveDefinition" format=3]
-
-[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1_m4as8"]
-
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
 [resource]
-script = ExtResource("1_m4as8")
+script = ExtResource("1")
 index = 1
-title = "第一夜·尸行"
-end_time = 90.0
-spawn_interval = 0.72
-enemy_weights = {
-&"corpse": 1.0
-}
-enemy_cap = 55
+title = "第一响·尸行"
+end_time = 50.0
+spawn_interval = 0.78
+enemy_weights = {&"corpse": 1.0}
+enemy_cap = 45
+target_duration = 50.0
+unlock_zone_id = &"mountain_gate"

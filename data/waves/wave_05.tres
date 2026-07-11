@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+index = 5
+title = "第五响·纸煞"
+start_time = 240.0
+end_time = 290.0
+spawn_interval = 0.46
+enemy_weights = {&"paper_wraith": 0.38, &"hound": 0.32, &"lantern": 0.3}
+enemy_cap = 90
+elite_chance = 0.08
+target_duration = 50.0
+environment_event_ids = Array[StringName]([&"mist_zone"])

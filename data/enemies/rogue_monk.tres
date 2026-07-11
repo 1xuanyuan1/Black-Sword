@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=4 format=3]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/rogue_monk.tscn" id="2"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/revenant.png" id="3"]
+[resource]
+script = ExtResource("1")
+id = &"rogue_monk"
+display_name = "破戒僧"
+max_health = 82.0
+speed = 66.0
+damage = 15.0
+xp_value = 5
+attack_range = 340.0
+attack_cooldown = 2.7
+texture = ExtResource("3")
+actor_scene = ExtResource("2")
+visual_kind = &"character"
+behavior = &"sigil"
+scale_factor = 3.6
+tint = Color(0.72, 0.58, 0.45, 1)

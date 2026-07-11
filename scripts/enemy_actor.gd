@@ -14,6 +14,11 @@ var health := 20.0
 var max_health := 20.0
 var dead := false
 var elite := false
+var elite_affix: StringName
+var move_speed_multiplier := 1.0
+var outgoing_damage_multiplier := 1.0
+var attack_cooldown_multiplier := 1.0
+var xp_multiplier := 1
 var hit_radius := 18.0
 var attack_timer := 0.5
 var attack_windup := 0.0
@@ -27,22 +32,31 @@ var charge_time := 0.0
 var approach_offset := Vector2.ZERO
 
 
-func setup(new_arena: Node, new_definition: EnemyDefinition, is_elite: bool = false, health_multiplier: float = 1.0) -> void:
+func setup(new_arena: Node, new_definition: EnemyDefinition, elite_value: Variant = false, health_multiplier: float = 1.0) -> void:
 	arena = new_arena
 	definition = new_definition
-	elite = is_elite
+	elite_affix = &"blood" if elite_value is bool and elite_value else StringName(elite_value) if elite_value is StringName or elite_value is String else &""
+	elite = not elite_affix.is_empty()
+	if elite_affix == &"blood":
+		outgoing_damage_multiplier = 1.25
+		xp_multiplier = 2
+	elif elite_affix == &"swift":
+		move_speed_multiplier = 1.35
+		attack_cooldown_multiplier = 0.8
+	set_meta("elite_affix", elite_affix)
 	collision_layer = 0
 	set_collision_layer_value(3, true)
 	collision_mask = 0
 	set_collision_mask_value(2, true)
 	var offset_angle := TAU * float(abs(get_instance_id()) % 24) / 24.0
 	approach_offset = Vector2.from_angle(offset_angle) * (22.0 + float(abs(get_instance_id()) % 4) * 7.0)
-	max_health = definition.max_health * health_multiplier * (2.15 if elite else 1.0)
+	var elite_health_multiplier := 1.6 if elite_affix == &"blood" else 0.85 if elite_affix == &"swift" else 1.0
+	max_health = definition.max_health * health_multiplier * elite_health_multiplier
 	health = max_health
 	hit_radius = 24.0 if definition.id == &"revenant" else 17.0
 	visual.setup(definition.texture, definition.visual_kind, definition.scale_factor * (1.18 if elite else 1.0), definition.tint)
 	if elite:
-		visual.sprite.modulate = Color("ffd877")
+		visual.sprite.modulate = Color("ff6f6f") if elite_affix == &"blood" else Color("8fe8ff")
 	var body_shape: CircleShape2D = body_collision.shape as CircleShape2D
 	if body_shape != null:
 		body_shape.radius = hit_radius * 0.72
@@ -79,11 +93,33 @@ func _update_behavior(delta: float) -> void:
 	var to_player: Vector2 = global_position.direction_to(navigation_target)
 	var distance := global_position.distance_to(arena.player.global_position)
 	match definition.behavior:
+		&"diver":
+			if charge_time > 0.0:
+				charge_time -= delta
+				velocity = charge_velocity + knockback_velocity
+				if distance < 34.0:
+					arena.player.take_damage(DamageEvent.create(definition.damage * outgoing_damage_multiplier, self, charge_velocity.normalized(), 150.0, false, [&"dive"]))
+					charge_time = 0.0
+			elif charge_timer <= 0.0 and distance < definition.attack_range:
+				charge_timer = 2.6 * attack_cooldown_multiplier
+				charge_velocity = global_position.direction_to(arena.player.global_position) * 390.0 * move_speed_multiplier
+				arena.telegraph_line(global_position, charge_velocity.normalized(), 16.0, 320.0, 0.48)
+				_begin_attack(0.48, true)
+			else:
+				velocity = to_player * definition.speed * move_speed_multiplier * 0.62 * slow_multiplier + knockback_velocity
+		&"sigil":
+			if distance > 270.0:
+				velocity = to_player * definition.speed * move_speed_multiplier * slow_multiplier + knockback_velocity
+			else:
+				velocity = to_player.rotated(PI * 0.5) * definition.speed * 0.25 + knockback_velocity
+			if attack_timer <= 0.0 and distance < definition.attack_range:
+				attack_timer = definition.attack_cooldown * attack_cooldown_multiplier
+				arena.spawn_delayed_sigil(arena.player.global_position, definition.damage * outgoing_damage_multiplier, self)
 		&"ranged":
 			if distance > 205.0:
-				velocity = to_player * definition.speed * slow_multiplier + knockback_velocity
+				velocity = to_player * definition.speed * move_speed_multiplier * slow_multiplier + knockback_velocity
 			elif distance < 145.0:
-				velocity = -to_player * definition.speed * 0.7 * slow_multiplier + knockback_velocity
+				velocity = -to_player * definition.speed * move_speed_multiplier * 0.7 * slow_multiplier + knockback_velocity
 			else:
 				velocity = to_player.rotated(PI * 0.5) * definition.speed * 0.35 + knockback_velocity
 			if attack_timer <= 0.0 and distance < definition.attack_range:
@@ -101,11 +137,11 @@ func _update_behavior(delta: float) -> void:
 				arena.telegraph_line(global_position, to_player, 20.0, 330.0, 0.62)
 				_begin_attack(0.62, true)
 			else:
-				velocity = to_player * definition.speed * slow_multiplier + knockback_velocity
+				velocity = to_player * definition.speed * move_speed_multiplier * slow_multiplier + knockback_velocity
 				if attack_timer <= 0.0 and distance < definition.attack_range:
 					_begin_attack(0.3)
 		_:
-			velocity = to_player * definition.speed * slow_multiplier + knockback_velocity
+			velocity = to_player * definition.speed * move_speed_multiplier * slow_multiplier + knockback_velocity
 			if attack_timer <= 0.0 and distance < definition.attack_range:
 				_begin_attack(0.24)
 
@@ -119,16 +155,16 @@ func _begin_attack(windup: float, is_charge: bool = false) -> void:
 
 func _resolve_attack() -> void:
 	attack_pending = false
-	attack_timer = definition.attack_cooldown
+	attack_timer = definition.attack_cooldown * attack_cooldown_multiplier
 	if get_meta("pending_charge", false):
 		charge_time = 0.55
 		set_meta("pending_charge", false)
 		return
 	var to_player := global_position.direction_to(arena.player.global_position)
 	if definition.behavior == &"ranged":
-		arena.spawn_enemy_projectile(global_position, to_player, definition.damage, self)
+		arena.spawn_enemy_projectile(global_position, to_player, definition.damage * outgoing_damage_multiplier, self)
 	elif global_position.distance_to(arena.player.global_position) < definition.attack_range + 18.0:
-		arena.player.take_damage(DamageEvent.create(definition.damage, self, to_player, 120.0, false, [&"melee"]))
+		arena.player.take_damage(DamageEvent.create(definition.damage * outgoing_damage_multiplier, self, to_player, 120.0, false, [&"melee"]))
 
 
 func take_damage(event: DamageEvent) -> void:
@@ -159,5 +195,5 @@ func apply_slow(multiplier: float, duration: float, freeze: bool = false) -> voi
 
 
 func _finish_death() -> void:
-	defeated.emit(self, definition.xp_value * (4 if elite else 1), global_position)
+	defeated.emit(self, definition.xp_value * xp_multiplier, global_position)
 	queue_free()

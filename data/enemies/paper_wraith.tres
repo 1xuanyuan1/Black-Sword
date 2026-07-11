@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" load_steps=4 format=3]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/paper_wraith.tscn" id="2"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/lantern.png" id="3"]
+[resource]
+script = ExtResource("1")
+id = &"paper_wraith"
+display_name = "纸煞"
+max_health = 30.0
+speed = 148.0
+damage = 11.0
+xp_value = 3
+attack_range = 260.0
+attack_cooldown = 2.4
+texture = ExtResource("3")
+actor_scene = ExtResource("2")
+visual_kind = &"monster"
+behavior = &"diver"
+scale_factor = 2.4
+tint = Color(0.86, 0.82, 0.69, 1)
+tags = Array[StringName]([&"flying"])

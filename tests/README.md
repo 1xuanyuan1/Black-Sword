@@ -27,6 +27,7 @@
 - `item_system`：五种即时效果、陶罐与精英掉落、同屏上限、四波保底、重复增益规则与临时效果 HUD。
 - `skill_inventory`：10+10 内容、6+6 槽位、候选过滤、五级心法属性聚合与双排 HUD。
 - `evolution_system`：十套配方、进阶条件、原槽替换、冷却继承、永久宝匣、三选一与单局三次上限。
+- `wave_director`：十二波顺序、Boss 死亡门控、三控制器装配、两种新敌人、精英词缀与三名小 Boss。
 
 ## 编写约定
 
@@ -68,4 +69,10 @@
 
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-evolutions
+```
+
+十二波入口把普通波压缩为 2.5 秒，并自动击败 Boss，便于快速检查完整顺序与三次宝匣：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-waves
 ```

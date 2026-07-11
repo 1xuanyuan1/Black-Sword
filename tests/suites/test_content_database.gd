@@ -16,7 +16,7 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	database.reload_content()
 
 	context.check(database.validate_all().is_empty(), "ContentDatabase 的资源引用校验通过")
-	context.check(database.content_counts() == {"characters": 5, "skills": 30, "enemies": 4, "waves": 4, "items": 5, "meta_upgrades": 4, "evolutions": 10}, "ContentDatabase 加载五角色、10+10+10 技能与十套进阶配方")
+	context.check(database.content_counts() == {"characters": 5, "skills": 30, "enemies": 6, "waves": 12, "items": 5, "meta_upgrades": 4, "evolutions": 10}, "ContentDatabase 加载 V1 角色、技能、六类敌人与十二波")
 
 	var expected_skill_ids := [
 		&"black_slash", &"rasengan", &"flying_sword", &"sword_wave", &"orbit_blades",
@@ -37,17 +37,17 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 		var item_definition: ItemDefinition = database.item(item_id)
 		context.check(item_definition != null and item_definition.icon != null and item_definition.world_scene != null, "局内道具 %s 的数据与资源完整" % item_id)
 
-	var expected_enemy_health := {&"corpse": 34.0, &"hound": 24.0, &"lantern": 42.0, &"revenant": 110.0}
+	var expected_enemy_health := {&"corpse": 34.0, &"hound": 24.0, &"lantern": 42.0, &"revenant": 110.0, &"paper_wraith": 30.0, &"rogue_monk": 82.0}
 	for enemy_id in expected_enemy_health:
 		var definition: EnemyDefinition = database.enemy(enemy_id)
 		context.check(definition != null and definition.actor_scene != null, "敌人 %s 拥有可加载的独立场景" % enemy_id)
 		context.check(definition != null and definition.max_health == expected_enemy_health[enemy_id], "敌人 %s 保留当前基础生命" % enemy_id)
 
-	var expected_wave_titles := ["第一夜·尸行", "第二夜·犬影", "第三夜·鬼灯", "第四夜·怨军"]
-	for index in range(1, 5):
+	var expected_wave_titles := ["第一响·尸行", "第二响·犬影", "第三响·骨王", "第四响·鬼灯", "第五响·纸煞", "第六响·红灯", "第七响·怨军", "第八响·破戒", "第九响·铁臂", "第十响·百鬼", "第十一响·鬼门", "第十二响·剑豪"]
+	for index in range(1, 13):
 		var definition: WaveDefinition = database.wave(index)
 		context.check(definition != null and definition.title == expected_wave_titles[index - 1], "第 %d 波标题与顺序保持不变" % index)
-	context.check(database.wave(5) == null, "不存在的波次索引返回 null")
+	context.check(database.wave(13) == null, "不存在的波次索引返回 null")
 
 	for character_id in [&"black_sword", &"minato", &"ning_shuanghua", &"xuandeng", &"zhao_yun"]:
 		var definition: CharacterDefinition = database.character(character_id)
@@ -59,7 +59,7 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	var legacy_registry := ContentRegistry.new()
 	context.check(legacy_registry.validate().is_empty(), "ContentRegistry 兼容层通过原有内容校验")
 	context.check(legacy_registry.skills[&"black_slash"] == database.skill(&"black_slash"), "ContentRegistry 从 ContentDatabase 读取技能资源")
-	context.check(legacy_registry.wave_for_time(180.0) == database.wave(3), "ContentRegistry 保留按时间查询波次的旧接口")
+	context.check(legacy_registry.wave_for_time(120.0) == database.wave(3), "ContentRegistry 保留按时间查询波次的旧接口")
 
 	if owns_database:
 		database.queue_free()

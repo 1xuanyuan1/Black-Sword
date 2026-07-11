@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+index = 7
+title = "第七响·怨军"
+start_time = 370.0
+end_time = 420.0
+spawn_interval = 0.38
+enemy_weights = {&"revenant": 0.58, &"hound": 0.42}
+enemy_cap = 105
+elite_chance = 0.12
+target_duration = 50.0
+unlock_zone_id = &"seal_hall"

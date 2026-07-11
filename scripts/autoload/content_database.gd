@@ -256,6 +256,18 @@ func _validate_references() -> PackedStringArray:
 			total_weight += float(definition.enemy_weights[enemy_id])
 		if not is_equal_approx(total_weight, 1.0):
 			errors.append("波次 %d 的敌人权重总和不是 1" % definition.index)
+	if _waves.size() != 12:
+		errors.append("V1 必须且只能包含十二波")
+	else:
+		for index in range(1, 13):
+			if _waves[index - 1].index != index:
+				errors.append("十二波索引必须从 1 连续到 12")
+		var expected_minibosses := [3, 6, 9]
+		for index in expected_minibosses:
+			if wave(index).kind != WaveDefinition.WaveKind.MINIBOSS:
+				errors.append("第 %d 波必须是小 Boss 波" % index)
+		if wave(12).kind != WaveDefinition.WaveKind.FINAL_BOSS:
+			errors.append("第 12 波必须是最终 Boss 波")
 	for definition in _meta_upgrades.values():
 		var meta_definition := definition as MetaUpgradeDefinition
 		if meta_definition.max_level <= 0:

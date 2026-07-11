@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+index = 8
+title = "第八响·破戒"
+start_time = 425.0
+end_time = 475.0
+spawn_interval = 0.31
+enemy_weights = {&"rogue_monk": 0.36, &"revenant": 0.38, &"lantern": 0.26}
+enemy_cap = 120
+elite_chance = 0.14
+target_duration = 50.0
+environment_event_ids = Array[StringName]([&"seal_pulse"])

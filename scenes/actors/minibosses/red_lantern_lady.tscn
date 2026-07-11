@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/miniboss_actor.gd" id="1"]
+[sub_resource type="CircleShape2D" id="1"]
+radius = 30.0
+[node name="RedLanternLady" type="CharacterBody2D"]
+script = ExtResource("1")
+boss_id = &"red_lantern_lady"
+display_name = "红灯鬼姬"
+max_health = 1280.0
+move_speed = 84.0
+tint = Color(0.78, 0.22, 0.36, 1)
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

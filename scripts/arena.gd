@@ -17,11 +17,10 @@ signal evolution_requested(chest_id: StringName, options: Array[EvolutionRecipe]
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
-const ENEMY_SCENES: Dictionary = {
-	&"corpse": preload("res://scenes/actors/enemies/corpse.tscn"),
-	&"hound": preload("res://scenes/actors/enemies/hound.tscn"),
-	&"lantern": preload("res://scenes/actors/enemies/lantern.tscn"),
-	&"revenant": preload("res://scenes/actors/enemies/revenant.tscn"),
+const MINIBOSS_SCENES: Dictionary = {
+	&"bone_corpse_king": preload("res://scenes/actors/minibosses/bone_corpse_king.tscn"),
+	&"red_lantern_lady": preload("res://scenes/actors/minibosses/red_lantern_lady.tscn"),
+	&"iron_arm_monk": preload("res://scenes/actors/minibosses/iron_arm_monk.tscn"),
 }
 
 @onready var backdrop: ArenaBackdrop = $Environment/AbandonedTempleMap
@@ -33,6 +32,9 @@ const ENEMY_SCENES: Dictionary = {
 @onready var skill_controller: SkillController = $GameplaySystems/SkillController
 @onready var item_drop_system: ItemDropSystem = $GameplaySystems/ItemDropSystem
 @onready var evolution_system: EvolutionSystem = $GameplaySystems/EvolutionSystem
+@onready var run_controller: RunController = $GameplaySystems/RunController
+@onready var wave_director: WaveDirector = $GameplaySystems/WaveDirector
+@onready var spawn_director: SpawnDirector = $GameplaySystems/SpawnDirector
 
 var skill_system: SkillController:
 	get:
@@ -57,6 +59,7 @@ var last_wave_title := ""
 var current_wave_index := 0
 var boss_started := false
 var boss: BossActor
+var miniboss: MinibossActor
 var projectile_count := 0
 var rng := RandomNumberGenerator.new()
 var temporary_item_effects: Dictionary = {}
@@ -87,10 +90,16 @@ func _ready() -> void:
 	skill_controller.skills_changed.connect(func(levels: Dictionary, active: Array[StringName], passive: Array[StringName]) -> void: skills_changed.emit(levels, active, passive))
 	evolution_system.setup(self, skill_controller, ContentDatabase.all_evolutions())
 	evolution_system.evolution_available.connect(func(chest_id: StringName, options: Array[EvolutionRecipe]) -> void: evolution_requested.emit(chest_id, options))
+	run_controller.setup(self)
+	wave_director.setup(ContentDatabase.all_waves())
+	spawn_director.setup(self)
+	wave_director.wave_started.connect(_on_wave_started)
+	wave_director.wave_completed.connect(_on_wave_completed)
+	wave_director.rest_started.connect(_on_wave_rest_started)
 	xp_changed.emit(current_xp, required_xp, player_level)
 	player_health_changed.emit(player.health, player.max_health)
-	announce("第一夜·尸行", Color("d9e4ff"))
 	music_requested.emit(&"battle")
+	wave_director.start()
 
 
 func _process(delta: float) -> void:
@@ -99,26 +108,9 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	_update_temporary_item_effects(delta)
 	stats_changed.emit(elapsed, "鬼面剑豪" if boss_started else last_wave_title, kills)
-	if boss_started:
-		return
-	if elapsed >= BOSS_SPAWN_TIME:
-		_start_boss()
-		return
-	var wave := registry.wave_for_time(elapsed)
-	if wave == null:
-		return
-	if wave.index != current_wave_index:
-		if current_wave_index > 0:
-			item_drop_system.complete_wave(current_wave_index)
-		current_wave_index = wave.index
-		item_drop_system.start_wave(current_wave_index)
-	if wave.title != last_wave_title:
-		last_wave_title = wave.title
-		announce(wave.title, Color("d9e4ff"))
-	spawn_timer -= delta
-	if spawn_timer <= 0.0 and active_enemy_count() < wave.enemy_cap:
-		spawn_timer = wave.spawn_interval * rng.randf_range(0.82, 1.16)
-		spawn_enemy(_weighted_enemy(wave.enemy_weights), _spawn_position_around_player(), rng.randf() < wave.elite_chance)
+	wave_director.process(delta)
+	if spawn_timer < 9999.0:
+		spawn_director.process(delta)
 
 
 func _physics_process(delta: float) -> void:
@@ -126,40 +118,57 @@ func _physics_process(delta: float) -> void:
 		skill_controller.process_skills(delta)
 
 
-func spawn_enemy(id: StringName, at_position: Vector2, is_elite: bool = false) -> EnemyActor:
-	if not registry.enemies.has(id) or not ENEMY_SCENES.has(id) or active_enemy_count() >= 150:
+func spawn_enemy(id: StringName, at_position: Vector2, elite_value: Variant = false) -> EnemyActor:
+	var definition := ContentDatabase.enemy(id)
+	if definition == null or definition.actor_scene == null or active_enemy_count() >= 150:
 		return null
-	var enemy_scene: PackedScene = ENEMY_SCENES[id] as PackedScene
+	var enemy_scene: PackedScene = definition.actor_scene
 	var enemy: EnemyActor = enemy_scene.instantiate() as EnemyActor
 	actor_layer.add_child(enemy)
 	enemy.global_position = at_position
-	enemy.setup(self, registry.enemies[id], is_elite, enemy_health_multiplier())
+	enemy.setup(self, definition, elite_value, enemy_health_multiplier())
 	enemy.defeated.connect(_on_enemy_defeated)
 	enemies.append(enemy)
 	return enemy
 
 
 func enemy_health_multiplier() -> float:
-	# 每一夜提供明确的血量台阶；三分钟后进入高压阶段，第四夜继续增长。
-	if elapsed < 90.0:
-		# 第一夜作为构筑起步期：尸傀约 23~31 点生命，避免初始技能刮痧。
-		return 0.68 + elapsed / 90.0 * 0.22
-	if elapsed < 180.0:
-		return 1.35 + (elapsed - 90.0) / 90.0 * 0.22
-	if elapsed < 270.0:
-		return 2.05 + (elapsed - 180.0) / 90.0 * 0.30
-	return minf(2.65 + (elapsed - 270.0) / 120.0 * 0.55, 3.20)
+	return clampf(0.68 + float(maxi(current_wave_index - 1, 0)) * 0.22, 0.68, 3.10)
+
+
+func _on_wave_started(index: int, definition: WaveDefinition) -> void:
+	current_wave_index = index
+	last_wave_title = definition.title
+	if definition.kind == WaveDefinition.WaveKind.NORMAL:
+		item_drop_system.start_wave(index)
+	spawn_director.begin_wave(definition)
+	announce(definition.title, Color("d9e4ff"))
+
+
+func _on_wave_completed(index: int) -> void:
+	spawn_director.complete_wave()
+	var definition := ContentDatabase.wave(index)
+	if definition != null and definition.kind == WaveDefinition.WaveKind.NORMAL:
+		item_drop_system.complete_wave(index)
+	run_controller.record_wave_completed(index)
+
+
+func _on_wave_rest_started(next_index: int, _duration: float) -> void:
+	announce("钟息片刻 · 下一响 %d" % next_index, Color("a8c4d8"))
 
 
 func summon_minions(count: int) -> void:
-	if not is_instance_valid(boss):
-		return
+	var center := boss.global_position if is_instance_valid(boss) else miniboss.global_position if is_instance_valid(miniboss) else player.global_position
+	summon_minions_at(center, count)
+
+
+func summon_minions_at(center: Vector2, count: int) -> void:
 	for i in range(count):
 		var id: StringName = [&"corpse", &"hound", &"lantern"][i % 3]
-		spawn_enemy(id, boss.global_position + Vector2.from_angle(TAU * float(i) / float(count)) * 130.0, false)
+		spawn_enemy(id, center + Vector2.from_angle(TAU * float(i) / float(count)) * 130.0, false)
 
 
-func _weighted_enemy(weights: Dictionary) -> StringName:
+func weighted_enemy(weights: Dictionary) -> StringName:
 	var roll := rng.randf()
 	var accumulated := 0.0
 	for id in weights:
@@ -169,7 +178,7 @@ func _weighted_enemy(weights: Dictionary) -> StringName:
 	return weights.keys().back()
 
 
-func _spawn_position_around_player() -> Vector2:
+func spawn_position_around_player() -> Vector2:
 	var fallback := player.global_position + Vector2(420.0, 0.0)
 	for _attempt in range(16):
 		var angle := rng.randf() * TAU
@@ -183,13 +192,60 @@ func _spawn_position_around_player() -> Vector2:
 	return fallback
 
 
+func _weighted_enemy(weights: Dictionary) -> StringName:
+	return weighted_enemy(weights)
+
+
+func _spawn_position_around_player() -> Vector2:
+	return spawn_position_around_player()
+
+
+func spawn_miniboss(id: StringName) -> MinibossActor:
+	if not MINIBOSS_SCENES.has(id) or is_instance_valid(miniboss):
+		return null
+	miniboss = (MINIBOSS_SCENES[id] as PackedScene).instantiate() as MinibossActor
+	actor_layer.add_child(miniboss)
+	miniboss.global_position = player.global_position + Vector2(0, -330)
+	miniboss.setup(self, enemy_health_multiplier())
+	miniboss.defeated.connect(_on_miniboss_defeated)
+	enemies.append(miniboss)
+	wave_director.register_boss(miniboss.get_instance_id())
+	announce("小 Boss · %s" % miniboss.display_name, Color("ffb078"))
+	return miniboss
+
+
+func spawn_delayed_sigil(position: Vector2, damage: float, source: Node) -> void:
+	telegraph_circle(position, 72.0, 0.72, Color("c87955"))
+	_resolve_delayed_sigil(position, damage, source)
+
+
+func _resolve_delayed_sigil(position: Vector2, damage: float, source: Node) -> void:
+	await get_tree().create_timer(0.72).timeout
+	if not run_active:
+		return
+	add_effect(EffectNode.create(&"pulse", position, {"radius": 72.0, "duration": 0.36, "color": Color("d66a52")}))
+	if is_instance_valid(player) and position.distance_to(player.global_position) <= 90.0:
+		var damage_source: Node = source if is_instance_valid(source) else null
+		player.take_damage(DamageEvent.create(damage, damage_source, position.direction_to(player.global_position), 95.0, false, [&"sigil"]))
+
+
+func _on_miniboss_defeated(actor: MinibossActor) -> void:
+	if actor != miniboss:
+		return
+	var instance_id := actor.get_instance_id()
+	var death_position := actor.global_position
+	enemies.erase(actor)
+	kills += 1
+	run_controller.record_miniboss_defeated()
+	evolution_system.spawn_chest(death_position)
+	wave_director.notify_boss_defeated(instance_id)
+	miniboss = null
+
+
 func _start_boss() -> void:
 	if boss_started or not run_active:
 		return
 	boss_started = true
-	if current_wave_index > 0:
-		item_drop_system.complete_wave(current_wave_index)
-		current_wave_index = 0
 	var absorbed_xp := 0
 	for enemy in enemies.duplicate():
 		if is_instance_valid(enemy):
@@ -208,6 +264,7 @@ func _start_boss() -> void:
 	boss.defeated.connect(_on_boss_defeated)
 	enemies.append(boss)
 	boss_spawned.emit(boss)
+	wave_director.register_boss(boss.get_instance_id())
 	music_requested.emit(&"boss")
 
 
@@ -224,8 +281,11 @@ func _on_enemy_defeated(enemy: EnemyActor, xp_value: int, death_position: Vector
 
 
 func _on_boss_defeated() -> void:
+	var instance_id := boss.get_instance_id()
 	enemies.erase(boss)
 	kills += 1
+	run_controller.record_final_boss_defeated()
+	wave_director.notify_boss_defeated(instance_id)
 	run_active = false
 	last_run_result = _build_run_result(true)
 	announce("黑剑归鞘，荒寺复寂", Color("ffe6a6"))
@@ -268,6 +328,10 @@ func complete_levelup() -> void:
 
 func _request_next_levelup() -> void:
 	var options := skill_controller.get_upgrade_options(3)
+	if OS.is_debug_build() and get_meta("qa_auto_level", false) and not options.is_empty():
+		skill_controller.upgrade(options[0].id)
+		complete_levelup()
+		return
 	if options.is_empty():
 		player.heal(12.0)
 		complete_levelup()
@@ -306,17 +370,7 @@ func clear_nearby_for_revive(center: Vector2, radius: float = 180.0) -> void:
 
 
 func _build_run_result(victory: bool) -> RunResult:
-	var result := RunResult.new()
-	result.ensure_run_id()
-	result.character_id = selected_character_id
-	result.victory = victory
-	result.elapsed_seconds = elapsed
-	result.completed_waves = 4 if victory else clampi(floori(elapsed / 90.0), 0, 4)
-	result.final_boss_kill = victory
-	result.kills = kills
-	result.player_level = player_level
-	result.evolved_skill_ids.assign(skill_controller.inventory.evolved_ids.values())
-	return result
+	return run_controller.build_result(victory)
 
 
 func nearest_enemy(from_position: Vector2):

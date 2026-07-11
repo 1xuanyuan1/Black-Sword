@@ -176,7 +176,8 @@ func _check_player_hit() -> void:
 	if not is_instance_valid(arena.player) or arena.player.dead:
 		return
 	if global_position.distance_squared_to(arena.player.global_position) <= pow(radius + 18.0, 2.0):
-		arena.player.take_damage(DamageEvent.create(damage, owner_node, direction, knockback, false, [&"enemy_projectile"]))
+		var damage_source: Node = owner_node if is_instance_valid(owner_node) else null
+		arena.player.take_damage(DamageEvent.create(damage, damage_source, direction, knockback, false, [&"enemy_projectile"]))
 		queue_free()
 
 

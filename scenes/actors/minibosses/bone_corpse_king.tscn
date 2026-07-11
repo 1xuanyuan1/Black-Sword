@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/miniboss_actor.gd" id="1"]
+[sub_resource type="CircleShape2D" id="1"]
+radius = 30.0
+[node name="BoneCorpseKing" type="CharacterBody2D"]
+script = ExtResource("1")
+boss_id = &"bone_corpse_king"
+display_name = "腐骨尸王"
+max_health = 820.0
+move_speed = 62.0
+tint = Color(0.45, 0.62, 0.38, 1)
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+shape = SubResource("1")

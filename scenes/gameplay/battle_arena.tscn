@@ -1,10 +1,13 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_map.tscn" id="2_map"]
 [ext_resource type="Script" path="res://scripts/skill_system.gd" id="4_skills"]
 [ext_resource type="Script" path="res://scripts/item_drop_system.gd" id="5_items"]
 [ext_resource type="Script" path="res://scripts/evolution_system.gd" id="6_evolution"]
+[ext_resource type="Script" path="res://scripts/run_controller.gd" id="7_run"]
+[ext_resource type="Script" path="res://scripts/wave_director.gd" id="8_wave"]
+[ext_resource type="Script" path="res://scripts/spawn_director.gd" id="9_spawn"]
 
 [node name="BattleArena" type="Node2D"]
 editor_description = "完整战斗场景：组装地图、玩家、玩法系统及所有运行时对象层。"
@@ -45,3 +48,15 @@ script = ExtResource("5_items")
 [node name="EvolutionSystem" type="Node" parent="GameplaySystems"]
 editor_description = "管理永久悟道宝匣、合法进阶候选与单次消费。"
 script = ExtResource("6_evolution")
+
+[node name="RunController" type="Node" parent="GameplaySystems"]
+editor_description = "单局统计与一次性 RunResult 所有者。"
+script = ExtResource("7_run")
+
+[node name="WaveDirector" type="Node" parent="GameplaySystems"]
+editor_description = "十二波状态、计时、休整和 Boss 死亡门控。"
+script = ExtResource("8_wave")
+
+[node name="SpawnDirector" type="Node" parent="GameplaySystems"]
+editor_description = "波次敌群、精英词缀、小 Boss 与最终 Boss 生成。"
+script = ExtResource("9_spawn")

@@ -65,10 +65,10 @@ func validate() -> PackedStringArray:
 		errors.append("技能池应为 10 主动 + 10 心法 + 10 进阶，实际为 %d + %d + %d" % [active_count, passive_count, evolved_count])
 	if evolutions.size() != 10:
 		errors.append("进阶配方数量应为 10")
-	if enemies.size() != 4:
-		errors.append("敌人类型应为 4")
-	if waves.size() != 4:
-		errors.append("波次数量应为 4")
+	if enemies.size() != 6:
+		errors.append("普通敌人类型应为 6")
+	if waves.size() != 12:
+		errors.append("波次数量应为 12")
 	if items.size() != 5:
 		errors.append("局内道具数量应为 5")
 	return errors
