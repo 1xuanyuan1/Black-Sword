@@ -134,10 +134,13 @@ func _resolve_attack() -> void:
 func take_damage(event: DamageEvent) -> void:
 	if dead:
 		return
-	health -= event.amount
+	var received_damage := event.amount
+	if elite and event.source is PlayerActor and is_instance_valid(arena) and arena.run_config is RunConfig:
+		received_damage *= arena.run_config.elite_boss_damage_multiplier
+	health -= received_damage
 	knockback_velocity += event.direction.normalized() * event.knockback
 	visual.play_hurt()
-	arena.show_damage(global_position + Vector2(0, -28), event.amount, Color("f4f1db"), event.critical)
+	arena.show_damage(global_position + Vector2(0, -28), received_damage, Color("f4f1db"), event.critical)
 	if health <= 0.0:
 		dead = true
 		velocity = Vector2.ZERO

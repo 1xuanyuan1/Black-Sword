@@ -2,7 +2,6 @@ extends Node
 
 const UI_FONT := preload("res://assets/fonts/NotoSansSC.ttf")
 const HERO_PORTRAIT := preload("res://assets/actors/hero/portrait_actual.png")
-const MINATO_TEXTURE := preload("res://AI资源库/火影忍者/波风水门/sprite.png")
 const BATTLE_MUSIC := preload("res://assets/audio/battle.ogg")
 const BOSS_MUSIC := preload("res://assets/audio/boss.ogg")
 const BATTLE_ARENA_SCENE: PackedScene = preload("res://scenes/gameplay/battle_arena.tscn")
@@ -104,6 +103,8 @@ func _handle_qa_args() -> void:
 		call_deferred("_show_save_selection")
 	elif "--qa-meta-progression" in OS.get_cmdline_user_args():
 		call_deferred("_qa_show_meta_progression")
+	elif "--qa-characters" in OS.get_cmdline_user_args():
+		call_deferred("_qa_show_characters")
 
 
 func _process(_delta: float) -> void:
@@ -176,6 +177,24 @@ func _qa_show_meta_progression() -> void:
 	_show_meta_progression("QA 验收档：已提供 5000 测试夜烬，不影响正式存档")
 
 
+func _qa_show_characters() -> void:
+	if not OS.is_debug_build():
+		return
+	SaveManager.configure_storage_root_for_tests("user://tests/manual_characters")
+	var summaries: Array[SaveSlotSummary] = SaveManager.list_slots()
+	var profile: ProfileData = GameState.load_profile(1) if summaries[0].exists else GameState.create_profile(1)
+	if profile == null:
+		return
+	profile.night_embers = maxi(profile.night_embers, 5000)
+	for definition in ContentDatabase.all_characters().values():
+		var character := definition as CharacterDefinition
+		if character.id not in profile.unlocked_characters and character.id not in profile.available_character_unlocks:
+			profile.available_character_unlocks.append(character.id)
+	GameState.save_current(&"qa_character_seed")
+	selected_character_id = profile.selected_character_id
+	_show_character_selection("QA 验收档：所有角色均可支付解锁，使用独立测试存档")
+
+
 func _input(event: InputEvent) -> void:
 	if save_select_open:
 		if event.is_action_pressed("pause"):
@@ -186,6 +205,8 @@ func _input(event: InputEvent) -> void:
 			_select_character(&"black_sword")
 		elif event.is_action_pressed("choose_2"):
 			_select_character(&"minato")
+		elif event.is_action_pressed("choose_3"):
+			_select_character(&"ning_shuanghua")
 		elif event.is_action_pressed("pause"):
 			if GameState.has_current_profile():
 				_show_hub()
@@ -662,7 +683,7 @@ func _purchase_meta_upgrade(id: StringName) -> void:
 	elif error == ERR_CANT_ACQUIRE_RESOURCE:
 		notice = "此分支已满级"
 	elif error != OK:
-		notice = "保存失败：%s" % error_string(error)
+		notice = "保存失败：%s" % _save_error_text(error)
 	_show_meta_progression(notice)
 
 
@@ -679,7 +700,7 @@ func _request_meta_reset() -> void:
 	dialog.cancel_button_text = "取消"
 	dialog.confirmed.connect(func() -> void:
 		var error := GameState.reset_meta_upgrades()
-		_show_meta_progression("已返还 %d 夜烬" % refund if error == OK else "重置失败：%s" % error_string(error))
+		_show_meta_progression("已返还 %d 夜烬" % refund if error == OK else "重置失败：%s" % _save_error_text(error))
 	)
 	background_add_dialog(dialog)
 
@@ -755,7 +776,7 @@ func _format_play_time(total_seconds: int) -> String:
 	return "%02d:%02d:%02d" % [int(total_seconds / 3600), int(total_seconds / 60) % 60, total_seconds % 60]
 
 
-func _show_character_selection() -> void:
+func _show_character_selection(notice: String = "") -> void:
 	game_running = false
 	save_select_open = false
 	hub_open = false
@@ -775,37 +796,27 @@ func _show_character_selection() -> void:
 	header.size = Vector2(1280, 64)
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	background.add_child(header)
-	var hint := _label("不同角色拥有不同的初始招式（按 1 / 2 选择）", 19, Color("9fb2cc"))
+	var hint := _label("点击角色卡选择；未解锁角色会明确显示条件与夜烬费用", 18, Color("9fb2cc"))
 	hint.position = Vector2(0, 94)
 	hint.size = Vector2(1280, 36)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	background.add_child(hint)
-	var cards := HBoxContainer.new()
+	var notice_label := _label(notice, 16, Color("9fd7b0") if not notice.contains("不足") and not notice.contains("失败") else Color("ff9b9b"))
+	notice_label.name = "CharacterSelectionNotice"
+	notice_label.position = Vector2(80, 126)
+	notice_label.size = Vector2(1120, 26)
+	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(notice_label)
+	var cards := GridContainer.new()
 	cards.name = "CharacterCards"
-	cards.set_anchors_preset(Control.PRESET_CENTER)
-	cards.offset_left = -420
-	cards.offset_top = -214
-	cards.offset_right = 420
-	cards.offset_bottom = 240
-	cards.alignment = BoxContainer.ALIGNMENT_CENTER
-	cards.add_theme_constant_override("separation", 34)
+	cards.columns = 5
+	cards.position = Vector2(38, 158)
+	cards.size = Vector2(1204, 448)
+	cards.add_theme_constant_override("h_separation", 14)
 	background.add_child(cards)
-	cards.add_child(_character_card(
-		&"black_sword",
-		"1 · 黑剑客",
-		"初始招式：黑剑·横扫",
-		"近身剑客，以宽阔剑弧斩开群敌。",
-		HERO_PORTRAIT,
-		Color("a9c7ef")
-	))
-	cards.add_child(_character_card(
-		&"minato",
-		"2 · 波风水门",
-		"初始招式：螺旋丸",
-		"联动忍者，发射高速旋转的查克拉球。",
-		_minato_portrait_texture(),
-		Color("64d4ff")
-	))
+	var definitions := _ordered_characters()
+	for index in range(definitions.size()):
+		cards.add_child(_character_card(definitions[index], index + 1))
 	var back := _button("返回守夜庭" if GameState.has_current_profile() else "返回标题", Vector2(240, 48))
 	back.name = "BackToTitleButton"
 	back.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -817,60 +828,115 @@ func _show_character_selection() -> void:
 	background.add_child(back)
 
 
-func _character_card(
-	id: StringName,
-	display_name: String,
-	initial_skill: String,
-	description: String,
-	portrait_texture: Texture2D,
-	accent: Color
-) -> Button:
-	var card := _button("", Vector2(360, 430))
-	card.name = "MinatoCharacterCard" if id == &"minato" else "BlackSwordCharacterCard"
+func _character_card(definition: CharacterDefinition, display_index: int) -> Button:
+	var id := definition.id
+	var accent := definition.accent
+	var unlocked := definition.unlock_condition_id == &"default" if not GameState.has_current_profile() else GameState.is_character_unlocked(id)
+	var available := GameState.is_character_unlock_available(id)
+	var card := _button("", Vector2(226, 438))
+	card.name = "CharacterCard_" + String(id)
 	card.add_theme_stylebox_override("normal", _style_box(Color("111a2a"), Color(accent, 0.72), 3, 14, 18))
 	card.add_theme_stylebox_override("hover", _style_box(Color("1b2b43"), accent, 4, 14, 18))
+	card.add_theme_stylebox_override("disabled", _style_box(Color("0b101b"), Color("354158"), 2, 14, 18))
 	var column := VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_theme_constant_override("separation", 10)
 	card.add_child(column)
 	var portrait := TextureRect.new()
-	portrait.texture = portrait_texture
+	portrait.texture = _character_portrait_texture(definition)
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.custom_minimum_size = Vector2(300, 245)
+	portrait.custom_minimum_size = Vector2(194, 170)
+	portrait.modulate = Color.WHITE if unlocked or available else Color(0.20, 0.24, 0.31, 0.78)
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(portrait)
-	var name_label := _label(display_name, 27, Color("f6f1e5"))
+	var name_label := _label("%d · %s" % [display_index, definition.display_name], 21, Color("f6f1e5"))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(name_label)
-	var skill_label := _label(initial_skill, 19, accent)
+	var initial_skill := ContentDatabase.skill(definition.initial_skill_id)
+	var skill_name := String(definition.initial_skill_id) if initial_skill == null else initial_skill.display_name
+	var skill_label := _label("初始：" + skill_name, 16, accent)
 	skill_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(skill_label)
-	var description_label := _label(description, 16, Color("b6c4d8"))
+	var description_label := _label(definition.description, 13, Color("b6c4d8"))
 	description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description_label.custom_minimum_size = Vector2(310, 52)
+	description_label.custom_minimum_size = Vector2(198, 48)
 	column.add_child(description_label)
-	card.pressed.connect(_select_character.bind(id))
+	var trait_label := _label(definition.trait_description, 13, Color("9fd7b0"))
+	trait_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	trait_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	trait_label.custom_minimum_size = Vector2(198, 40)
+	column.add_child(trait_label)
+	var state_text := "已解锁 · 点击出战"
+	var state_color := Color("72e6a5")
+	if not unlocked and available:
+		state_text = "可解锁 · %d 夜烬" % definition.unlock_cost
+		state_color = Color("ffd38a")
+	elif not unlocked:
+		state_text = "%s\n费用 %d 夜烬" % [definition.unlock_description, definition.unlock_cost]
+		state_color = Color("8392a8")
+	var state_label := _label(state_text, 14, state_color)
+	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	state_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	state_label.custom_minimum_size = Vector2(198, 44)
+	column.add_child(state_label)
+	card.disabled = not unlocked and not available
+	if unlocked:
+		card.pressed.connect(_select_character.bind(id))
+	elif available:
+		card.pressed.connect(_unlock_character.bind(id))
 	return card
 
 
-func _minato_portrait_texture() -> AtlasTexture:
+func _ordered_characters() -> Array[CharacterDefinition]:
+	var result: Array[CharacterDefinition] = []
+	for value in ContentDatabase.all_characters().values():
+		result.append(value as CharacterDefinition)
+	result.sort_custom(func(a: CharacterDefinition, b: CharacterDefinition) -> bool: return a.sort_order < b.sort_order)
+	return result
+
+
+func _character_portrait_texture(definition: CharacterDefinition) -> Texture2D:
+	if definition.portrait_region.size.x <= 0.0 or definition.portrait_region.size.y <= 0.0:
+		return definition.portrait
 	var portrait := AtlasTexture.new()
-	portrait.atlas = MINATO_TEXTURE
-	portrait.region = Rect2(189, 126, 21, 42)
+	portrait.atlas = definition.portrait
+	portrait.region = definition.portrait_region
 	return portrait
 
 
+func _unlock_character(id: StringName) -> void:
+	var definition := ContentDatabase.character(id)
+	var error := GameState.unlock_character(id)
+	if error == OK:
+		_show_character_selection("%s 已解锁" % definition.display_name)
+	elif error == ERR_CANT_ACQUIRE_RESOURCE:
+		_show_character_selection("夜烬不足：解锁 %s 需要 %d 夜烬" % [definition.display_name, definition.unlock_cost])
+	elif error == ERR_UNAVAILABLE:
+		_show_character_selection("尚未达成解锁条件：%s" % definition.unlock_description)
+	else:
+		_show_character_selection("角色解锁保存失败：%s" % _save_error_text(error))
+
+
 func _select_character(id: StringName) -> void:
-	if id not in [&"black_sword", &"minato"]:
+	var definition := ContentDatabase.character(id)
+	if definition == null:
+		return
+	if GameState.has_current_profile() and not GameState.is_character_unlocked(id):
+		_show_character_selection("%s 尚未解锁" % definition.display_name)
+		return
+	if not GameState.has_current_profile() and definition.unlock_condition_id != &"default":
+		_show_character_selection("请先选择存档并解锁角色")
 		return
 	selected_character_id = id
 	if GameState.has_current_profile():
-		GameState.current_profile.selected_character_id = id
-		GameState.save_current(&"character_selected")
+		var save_error := GameState.select_character(id)
+		if save_error != OK:
+			_show_character_selection("角色选择保存失败：%s" % _save_error_text(save_error))
+			return
 	character_select_open = false
 	_play_sfx(&"ui")
 	_start_game()
@@ -1336,7 +1402,7 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	if GameState.has_current_profile() and submit_error == OK:
 		ember_text = "\n带回夜烬  %d · 当前持有 %d" % [current_run_result.earned_night_embers, GameState.current_profile.night_embers]
 	elif GameState.has_current_profile():
-		ember_text = "\n结算保存失败：%s" % error_string(submit_error)
+		ember_text = "\n结算保存失败：%s" % _save_error_text(submit_error)
 	var result_text := "存活时间  %02d:%02d\n最终境界  %d\n斩敌数量  %d%s" % [minutes, seconds, level, kills, ember_text]
 	var stats := _label(result_text, 24, Color("c8d4e4"))
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1348,6 +1414,11 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	var back := _button("返回守夜庭" if GameState.has_current_profile() else "返回标题", Vector2(320, 54))
 	back.pressed.connect(_show_hub if GameState.has_current_profile() else _show_title)
 	box.add_child(back)
+
+
+func _save_error_text(error: Error) -> String:
+	var detail := String(SaveManager.last_error_message).strip_edges()
+	return detail if not detail.is_empty() else error_string(error)
 
 
 func _modal_background() -> Control:

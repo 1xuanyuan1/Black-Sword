@@ -14,3 +14,16 @@ portrait = ExtResource("2_ig1hn")
 initial_skill_id = &"rasengan"
 visual_kind = &"ocad_character"
 visual_scale = 2.7
+trait_modifiers = {
+"cooldown_reduction": 0.08,
+"move_speed": 0.12
+}
+trait_description = "移动速度 +12%，主动冷却 -8%"
+unlock_condition_id = &"wave_complete"
+unlock_condition_value = 3
+unlock_description = "任意一局完成第 3 波"
+unlock_cost = 300
+story_route_id = &"minato_rift"
+accent = Color(0.39215687, 0.83137256, 1, 1)
+portrait_region = Rect2(189, 126, 21, 42)
+sort_order = 1

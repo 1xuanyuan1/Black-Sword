@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/player_actor.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/actor_visual.gd" id="2_visual"]
+[ext_resource type="Texture2D" path="res://assets/actors/characters/xuandeng.png" id="3_texture"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player_body"]
+radius = 14.0
+
+[node name="XuandengPlayerCharacter" type="CharacterBody2D" groups=["player"]]
+editor_description = "钟魂玄灯：高生命与减伤，以烈阳掌作为初始技能。"
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_player")
+character_id = &"xuandeng"
+character_display_name = "钟魂·玄灯"
+initial_skill_id = &"sun_palm"
+character_texture = ExtResource("3_texture")
+character_visual_kind = &"character"
+character_visual_scale = 0.42
+
+[node name="CharacterVisual" type="Node2D" parent="."]
+editor_description = "玄灯的 4×7 步战动画。"
+z_index = 5
+script = ExtResource("2_visual")
+
+[node name="CharacterSprite" type="Sprite2D" parent="CharacterVisual"]
+texture_filter = 1
+texture = ExtResource("3_texture")
+hframes = 4
+vframes = 7
+scale = Vector2(0.42, 0.42)
+
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+position = Vector2(0, 8)
+shape = SubResource("CircleShape2D_player_body")
+
+[node name="FollowCamera" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0

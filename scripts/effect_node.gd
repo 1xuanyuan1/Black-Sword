@@ -61,6 +61,14 @@ func _draw() -> void:
 				points.append(p)
 			points.append(end)
 			draw_polyline(points, draw_color, 5.0 * fade + 1.0, true)
+		&"spear":
+			var end := line_end
+			var normal := end.normalized()
+			var side := normal.rotated(PI * 0.5)
+			draw_line(side * radius * 0.18, end, Color(color, 0.35 * fade), radius * 0.65, true)
+			draw_line(Vector2.ZERO, end, draw_color, maxf(2.0, radius * 0.18), true)
+			var tip := PackedVector2Array([end + normal * radius * 0.5, end - normal * radius * 0.25 + side * radius * 0.24, end - normal * radius * 0.25 - side * radius * 0.24])
+			draw_colored_polygon(tip, draw_color)
 		&"warning_circle":
 			var pulse := 0.55 + 0.35 * sin(elapsed * 13.0)
 			draw_circle(Vector2.ZERO, radius, Color(color, 0.08 * pulse))

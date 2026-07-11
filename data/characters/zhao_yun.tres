@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/player_zhao_yun.tscn" id="1_scene"]
+[ext_resource type="Texture2D" path="res://assets/actors/characters/zhao_yun_portrait.png" id="2_portrait"]
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="3_script"]
+
+[resource]
+script = ExtResource("3_script")
+id = &"zhao_yun"
+display_name = "常山赵子龙"
+description = "汉水破阵，孤骑寻踪。纵是百鬼列阵，亦当一往无前。"
+actor_scene = ExtResource("1_scene")
+portrait = ExtResource("2_portrait")
+initial_skill_id = &"dragon_spear"
+visual_kind = &"character"
+visual_scale = 0.42
+trait_modifiers = {
+"elite_boss_damage": 0.12,
+"move_speed": 0.08
+}
+trait_description = "移动速度 +8%，对精英与 Boss 伤害 +12%"
+unlock_condition_id = &"wave_complete"
+unlock_condition_value = 9
+unlock_description = "任意一局完成第 9 波"
+unlock_cost = 1200
+story_route_id = &"zhao_yun_hanzhong"
+accent = Color(0.7137255, 0.8392157, 1, 1)
+sort_order = 4

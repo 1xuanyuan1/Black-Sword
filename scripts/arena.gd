@@ -15,10 +15,6 @@ signal music_requested(id: StringName)
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
-const PLAYER_SCENES: Dictionary = {
-	&"black_sword": preload("res://scenes/actors/player.tscn"),
-	&"minato": preload("res://scenes/actors/player_minato.tscn"),
-}
 const ENEMY_SCENES: Dictionary = {
 	&"corpse": preload("res://scenes/actors/enemies/corpse.tscn"),
 	&"hound": preload("res://scenes/actors/enemies/hound.tscn"),
@@ -63,7 +59,11 @@ func _ready() -> void:
 	else:
 		selected_character_id = run_config.character_id
 	backdrop.setup(bounds)
-	var player_scene: PackedScene = PLAYER_SCENES.get(selected_character_id, PLAYER_SCENES[&"black_sword"]) as PackedScene
+	var character_definition := ContentDatabase.character(selected_character_id)
+	if character_definition == null:
+		selected_character_id = &"black_sword"
+		character_definition = ContentDatabase.character(selected_character_id)
+	var player_scene: PackedScene = character_definition.actor_scene
 	player = player_scene.instantiate() as PlayerActor
 	actor_layer.add_child(player)
 	player.global_position = player_spawn_point.global_position

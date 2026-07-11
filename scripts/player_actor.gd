@@ -23,7 +23,9 @@ var max_health := 100.0
 var health := 100.0
 var base_speed := 210.0
 var speed_multiplier := 1.0
+var character_speed_multiplier := 1.0
 var pickup_range := 92.0
+var damage_taken_multiplier := 1.0
 var invulnerability := 0.0
 var dead := false
 var last_direction := Vector2.DOWN
@@ -53,6 +55,9 @@ func apply_run_config(config: RunConfig) -> void:
 		return
 	max_health = 100.0 * config.health_multiplier
 	health = max_health
+	character_speed_multiplier = config.move_speed_multiplier
+	speed_multiplier = character_speed_multiplier
+	damage_taken_multiplier = clampf(config.damage_taken_multiplier, 0.55, 1.0)
 	revive_rank = clampi(config.revive_rank, 0, 3)
 	revive_used = false
 	health_changed.emit(health, max_health)
@@ -85,12 +90,13 @@ func set_virtual_move_input(value: Vector2) -> void:
 func take_damage(event: DamageEvent) -> void:
 	if dead or invulnerability > 0.0:
 		return
-	health = maxf(health - event.amount, 0.0)
+	var received_damage := event.amount * damage_taken_multiplier
+	health = maxf(health - received_damage, 0.0)
 	invulnerability = 0.6
 	knockback_velocity += event.direction.normalized() * event.knockback
 	visual.play_hurt()
 	arena.play_sfx(&"hit")
-	arena.show_damage(global_position + Vector2(0, -36), event.amount, Color("ff8888"))
+	arena.show_damage(global_position + Vector2(0, -36), received_damage, Color("ff8888"))
 	health_changed.emit(health, max_health)
 	if health <= 0.0:
 		if _try_revive():

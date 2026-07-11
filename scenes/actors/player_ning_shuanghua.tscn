@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/player_actor.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/actor_visual.gd" id="2_visual"]
+[ext_resource type="Texture2D" path="res://assets/actors/characters/ning_shuanghua.png" id="3_texture"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player_body"]
+radius = 14.0
+
+[node name="NingShuanghuaPlayerCharacter" type="CharacterBody2D" groups=["player"]]
+editor_description = "守灯人宁霜华：范围与控制专精，以寒霜剑阵作为初始技能。"
+collision_layer = 1
+collision_mask = 2
+script = ExtResource("1_player")
+character_id = &"ning_shuanghua"
+character_display_name = "守灯人·宁霜华"
+initial_skill_id = &"frost"
+character_texture = ExtResource("3_texture")
+character_visual_kind = &"character"
+character_visual_scale = 0.42
+
+[node name="CharacterVisual" type="Node2D" parent="."]
+editor_description = "宁霜华的 4×7 步战动画。"
+z_index = 5
+script = ExtResource("2_visual")
+
+[node name="CharacterSprite" type="Sprite2D" parent="CharacterVisual"]
+texture_filter = 1
+texture = ExtResource("3_texture")
+hframes = 4
+vframes = 7
+scale = Vector2(0.42, 0.42)
+
+[node name="BodyCollision" type="CollisionShape2D" parent="."]
+position = Vector2(0, 8)
+shape = SubResource("CircleShape2D_player_body")
+
+[node name="FollowCamera" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0

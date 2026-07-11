@@ -15,6 +15,7 @@ var cooldowns: Dictionary = {}
 var orbit_angle := 0.0
 var orbit_animation_time := 0.0
 var orbit_visuals: Array[Sprite2D] = []
+var dragon_spear_casts := 0
 var rng := RandomNumberGenerator.new()
 
 
@@ -95,19 +96,40 @@ func damage_multiplier() -> float:
 
 func cooldown_multiplier() -> float:
 	var level: int = levels.get(&"tempered_edge", 0)
-	if level <= 0:
-		return 1.0
-	return 1.0 - float(definitions[&"tempered_edge"].stats(level).get("cdr", 0.0))
+	var multiplier := 1.0
+	if level > 0:
+		multiplier -= float(definitions[&"tempered_edge"].stats(level).get("cdr", 0.0))
+	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
+		multiplier *= (arena.get("run_config") as RunConfig).cooldown_multiplier
+	return maxf(multiplier, 0.45)
+
+
+func area_multiplier() -> float:
+	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
+		return (arena.get("run_config") as RunConfig).area_multiplier
+	return 1.0
+
+
+func status_duration_multiplier() -> float:
+	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
+		return (arena.get("run_config") as RunConfig).status_duration_multiplier
+	return 1.0
+
+
+func melee_damage_multiplier() -> float:
+	if is_instance_valid(arena) and arena.get("run_config") is RunConfig:
+		return (arena.get("run_config") as RunConfig).melee_damage_multiplier
+	return 1.0
 
 
 func _apply_passives() -> void:
 	var light_level: int = levels.get(&"light_step", 0)
 	if light_level > 0:
 		var stats: Dictionary = definitions[&"light_step"].stats(light_level)
-		player.speed_multiplier = 1.0 + float(stats.get("speed", 0.0))
+		player.speed_multiplier = player.character_speed_multiplier * (1.0 + float(stats.get("speed", 0.0)))
 		player.pickup_range = 92.0 * (1.0 + float(stats.get("pickup", 0.0)))
 	else:
-		player.speed_multiplier = 1.0
+		player.speed_multiplier = player.character_speed_multiplier
 		player.pickup_range = 92.0
 
 
@@ -128,6 +150,7 @@ func _cast_skill(id: StringName) -> void:
 		&"frost": _cast_frost(stats)
 		&"sun_palm": _cast_sun_palm(stats)
 		&"sword_rain": _cast_sword_rain(stats)
+		&"dragon_spear": _cast_dragon_spear(stats)
 
 
 func _cast_rasengan(stats: Dictionary) -> void:
@@ -174,9 +197,9 @@ func _cast_black_slash(stats: Dictionary) -> void:
 
 
 func _perform_slash(direction: Vector2, stats: Dictionary) -> void:
-	var radius: float = stats.get("range", 100.0)
+	var radius: float = float(stats.get("range", 100.0)) * area_multiplier()
 	var arc_value: float = stats.get("arc", 2.0)
-	var damage: float = stats.get("damage", 10.0) * damage_multiplier()
+	var damage: float = stats.get("damage", 10.0) * damage_multiplier() * melee_damage_multiplier()
 	arena.add_effect(EffectNode.create(&"slash", player.global_position, {"direction": direction, "radius": radius, "arc": arc_value, "duration": 0.28, "color": Color("edf5ff")}))
 	for enemy in arena.enemies.duplicate():
 		if not is_instance_valid(enemy) or enemy.dead:
@@ -239,7 +262,7 @@ func _spawn_wave(direction: Vector2, stats: Dictionary) -> void:
 
 func _cast_orbit(stats: Dictionary) -> void:
 	var damage: float = float(stats.get("damage", 7.0)) * damage_multiplier()
-	var hit_radius: float = stats.get("hit_radius", 31.0)
+	var hit_radius: float = float(stats.get("hit_radius", 31.0)) * area_multiplier()
 	for tornado_position in _orbit_positions(stats):
 		for enemy in arena.enemies.duplicate():
 			if is_instance_valid(enemy) and not enemy.dead and tornado_position.distance_to(enemy.global_position) < hit_radius + enemy.hit_radius:
@@ -250,7 +273,7 @@ func _orbit_positions(stats: Dictionary) -> Array[Vector2]:
 	var positions: Array[Vector2] = []
 	var outer_count: int = stats.get("count", 1)
 	var inner_count: int = stats.get("inner_count", 0)
-	var radius_value: float = stats.get("radius", 78.0)
+	var radius_value: float = float(stats.get("radius", 78.0)) * area_multiplier()
 	for i in range(outer_count):
 		positions.append(player.global_position + Vector2.from_angle(orbit_angle + TAU * float(i) / float(outer_count)) * radius_value)
 	for i in range(inner_count):
@@ -338,12 +361,13 @@ func _cast_frost(stats: Dictionary) -> void:
 		cooldowns[&"frost"] = 0.3
 		return
 	var center: Vector2 = target.global_position
-	var radius_value: float = stats.get("radius", 100.0)
-	arena.add_effect(EffectNode.create(&"frost", center, {"radius": radius_value, "duration": stats.get("duration", 2.0), "color": Color("7edbff"), "z": 3}))
+	var radius_value: float = float(stats.get("radius", 100.0)) * area_multiplier()
+	var duration_value: float = float(stats.get("duration", 2.0)) * status_duration_multiplier()
+	arena.add_effect(EffectNode.create(&"frost", center, {"radius": radius_value, "duration": duration_value, "color": Color("7edbff"), "z": 3}))
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			enemy.take_damage(DamageEvent.create(float(stats.get("damage", 15.0)) * damage_multiplier(), player, center.direction_to(enemy.global_position), 22.0, false, [&"frost"]))
-			enemy.apply_slow(stats.get("slow", 0.65), stats.get("duration", 2.0), stats.get("freeze", false))
+			enemy.apply_slow(stats.get("slow", 0.65), duration_value, stats.get("freeze", false))
 	arena.play_sfx(&"magic")
 
 
@@ -354,7 +378,7 @@ func _cast_sun_palm(stats: Dictionary) -> void:
 
 
 func _perform_palm(stats: Dictionary, scale_value: float) -> void:
-	var radius_value: float = float(stats.get("radius", 100.0)) * scale_value
+	var radius_value: float = float(stats.get("radius", 100.0)) * scale_value * area_multiplier()
 	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.45, "color": Color("ff984c")}))
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
@@ -375,7 +399,7 @@ func _cast_sword_rain(stats: Dictionary) -> void:
 		cooldowns[&"sword_rain"] = 0.3
 		return
 	var center: Vector2 = target.global_position
-	var radius_value: float = stats.get("radius", 110.0)
+	var radius_value: float = float(stats.get("radius", 110.0)) * area_multiplier()
 	arena.telegraph_circle(center, radius_value, 0.48, Color("bfa9ff"))
 	_resolve_sword_rain(center, stats)
 
@@ -386,7 +410,7 @@ func _resolve_sword_rain(center: Vector2, stats: Dictionary) -> void:
 		return
 	var targets: Array = []
 	for enemy in arena.enemies:
-		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= float(stats.get("radius", 110.0)) + enemy.hit_radius:
+		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= float(stats.get("radius", 110.0)) * area_multiplier() + enemy.hit_radius:
 			targets.append(enemy)
 	targets.shuffle()
 	var count: int = stats.get("count", 5)
@@ -400,3 +424,58 @@ func _resolve_sword_rain(center: Vector2, stats: Dictionary) -> void:
 			if is_instance_valid(enemy):
 				enemy.take_damage(DamageEvent.create(float(stats.get("damage", 18.0)) * 0.55 * damage_multiplier(), player, center.direction_to(enemy.global_position), 70.0, false, [&"giant_sword"]))
 	arena.play_sfx(&"slash")
+
+
+func _cast_dragon_spear(stats: Dictionary) -> void:
+	var target: Variant = arena.nearest_enemy(player.global_position)
+	if not is_instance_valid(target):
+		cooldowns[&"dragon_spear"] = 0.2
+		return
+	var direction := player.global_position.direction_to(target.global_position)
+	dragon_spear_casts += 1
+	player.play_attack(direction)
+	_perform_dragon_spear(direction, stats)
+	if stats.get("triple", false):
+		_delayed_dragon_spear(direction.rotated(-0.17), stats, 0.10)
+		_delayed_dragon_spear(direction.rotated(0.17), stats, 0.20)
+	elif int(stats.get("side_every", 0)) > 0 and dragon_spear_casts % int(stats.get("side_every", 1)) == 0:
+		_delayed_dragon_spear(direction.rotated(0.28), stats, 0.12)
+	arena.play_sfx(&"slash")
+
+
+func _perform_dragon_spear(direction: Vector2, stats: Dictionary) -> int:
+	var length: float = float(stats.get("distance", 150.0)) * area_multiplier()
+	var width: float = float(stats.get("width", 22.0)) * area_multiplier()
+	var damage: float = float(stats.get("damage", 20.0)) * damage_multiplier() * melee_damage_multiplier()
+	var max_targets: int = int(stats.get("pierce", 3))
+	arena.add_effect(EffectNode.create(&"spear", player.global_position, {
+		"direction": direction,
+		"line_end": direction.normalized() * length,
+		"radius": width,
+		"duration": 0.24,
+		"color": Color("b9e5ff"),
+	}))
+	var candidates: Array = []
+	for enemy in arena.enemies.duplicate():
+		if not is_instance_valid(enemy) or enemy.dead:
+			continue
+		var offset: Vector2 = enemy.global_position - player.global_position
+		var forward := offset.dot(direction)
+		var side_distance := absf(offset.cross(direction))
+		if forward >= 0.0 and forward <= length + enemy.hit_radius and side_distance <= width * 0.5 + enemy.hit_radius:
+			candidates.append({"enemy": enemy, "forward": forward})
+	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["forward"]) < float(b["forward"]))
+	var hit_count := 0
+	for candidate in candidates:
+		var enemy = candidate["enemy"]
+		enemy.take_damage(DamageEvent.create(damage, player, direction, 105.0, false, [&"dragon_spear", &"melee"]))
+		hit_count += 1
+		if hit_count >= max_targets:
+			break
+	return hit_count
+
+
+func _delayed_dragon_spear(direction: Vector2, stats: Dictionary, delay: float) -> void:
+	await get_tree().create_timer(delay).timeout
+	if is_instance_valid(player) and arena.run_active:
+		_perform_dragon_spear(direction, stats)

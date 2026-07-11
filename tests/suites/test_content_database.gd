@@ -16,11 +16,11 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	database.reload_content()
 
 	context.check(database.validate_all().is_empty(), "ContentDatabase 的资源引用校验通过")
-	context.check(database.content_counts() == {"characters": 2, "skills": 11, "enemies": 4, "waves": 4, "meta_upgrades": 4}, "ContentDatabase 加载当前内容及四条局外养成")
+	context.check(database.content_counts() == {"characters": 5, "skills": 12, "enemies": 4, "waves": 4, "meta_upgrades": 4}, "ContentDatabase 加载五角色、龙胆枪与当前 Demo 内容")
 
 	var expected_skill_ids := [
 		&"black_slash", &"rasengan", &"flying_sword", &"sword_wave", &"orbit_blades",
-		&"thunder", &"frost", &"sun_palm", &"sword_rain", &"light_step", &"tempered_edge",
+		&"thunder", &"frost", &"sun_palm", &"sword_rain", &"dragon_spear", &"light_step", &"tempered_edge",
 	]
 	for skill_id in expected_skill_ids:
 		var definition: SkillDefinition = database.skill(skill_id)
@@ -44,7 +44,7 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 		context.check(definition != null and definition.title == expected_wave_titles[index - 1], "第 %d 波标题与顺序保持不变" % index)
 	context.check(database.wave(5) == null, "不存在的波次索引返回 null")
 
-	for character_id in [&"black_sword", &"minato"]:
+	for character_id in [&"black_sword", &"minato", &"ning_shuanghua", &"xuandeng", &"zhao_yun"]:
 		var definition: CharacterDefinition = database.character(character_id)
 		context.check(definition != null and definition.actor_scene != null and definition.portrait != null, "角色 %s 的场景与头像资源完整" % character_id)
 		var actor := definition.actor_scene.instantiate() as PlayerActor

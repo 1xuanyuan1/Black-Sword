@@ -61,9 +61,12 @@ func _run_baseline() -> void:
 	var rasengan_level_three: Dictionary = rasengan_definition.stats(3)
 	var rasengan_level_four: Dictionary = rasengan_definition.stats(4)
 	var rasengan_level_five: Dictionary = rasengan_definition.stats(5)
-	_check(registry.validate().is_empty(), "内容注册表包含 11 个五级技能、4 类敌人与 4 个波次")
+	_check(registry.validate().is_empty(), "内容注册表包含 12 个五级技能、5 名角色、4 类敌人与 4 个波次")
 	_check_actor_preset("res://scenes/actors/player.tscn", "PlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/player_minato.tscn", "MinatoPlayerCharacter", "res://scripts/player_actor.gd")
+	_check_actor_preset("res://scenes/actors/player_ning_shuanghua.tscn", "NingShuanghuaPlayerCharacter", "res://scripts/player_actor.gd")
+	_check_actor_preset("res://scenes/actors/player_xuandeng.tscn", "XuandengPlayerCharacter", "res://scripts/player_actor.gd")
+	_check_actor_preset("res://scenes/actors/player_zhao_yun.tscn", "ZhaoYunPlayerCharacter", "res://scripts/player_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/corpse.tscn", "CorpseEnemy", "res://scripts/enemy_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/hound.tscn", "ShadowHoundEnemy", "res://scripts/enemy_actor.gd")
 	_check_actor_preset("res://scenes/actors/enemies/lantern.tscn", "LanternSpiritEnemy", "res://scripts/enemy_actor.gd")
@@ -306,19 +309,19 @@ func _run_baseline() -> void:
 	await process_frame
 	main._show_character_selection()
 	await process_frame
-	_check(main.character_select_open and main.ui_root.find_child("MinatoCharacterCard", true, false) != null, "点击开始后显示包含水门的角色选择界面")
-	main._select_character(&"minato")
+	_check(main.character_select_open and main.ui_root.find_child("CharacterCards", true, false).get_child_count() == 5, "点击开始后显示五张数据驱动角色卡")
+	main._select_character(&"black_sword")
 	await process_frame
-	_check(main.game_running and main.arena.player.character_id == &"minato", "角色选择结果会传入完整战斗场景")
+	_check(main.game_running and main.arena.player.character_id == &"black_sword", "角色选择结果会传入完整战斗场景")
 	_check(main.movement_joystick is MovementJoystick and main.touch_pause_button is Button, "战斗 HUD 包含移动端摇杆和触摸暂停按钮")
-	_check(not main.hp_bar.show_percentage and main.hp_value_label.text == "100", "角色血条显示当前生命数字 100 而非百分比")
-	var hud_shows_rasengan := false
+	_check(not main.hp_bar.show_percentage and main.hp_value_label.text == "110", "角色血条显示黑剑客固有生命加成后的数值 110")
+	var hud_shows_initial_skill := false
 	for label_node in main.skill_box.find_children("*", "Label", true, false):
 		var skill_label: Label = label_node as Label
-		if skill_label != null and skill_label.text.contains("螺旋丸"):
-			hud_shows_rasengan = true
+		if skill_label != null and skill_label.text.contains("横扫"):
+			hud_shows_initial_skill = true
 			break
-	_check(hud_shows_rasengan, "进入战斗后 HUD 会立即显示所选角色的初始技能")
+	_check(hud_shows_initial_skill, "进入战斗后 HUD 会立即显示所选角色的初始技能")
 	var time_before_pause: float = main.arena.elapsed
 	main.arena.collect_xp(12)
 	await process_frame

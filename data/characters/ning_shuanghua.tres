@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/player_ning_shuanghua.tscn" id="1_scene"]
+[ext_resource type="Texture2D" path="res://assets/actors/characters/ning_shuanghua_portrait.png" id="2_portrait"]
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="3_script"]
+
+[resource]
+script = ExtResource("3_script")
+id = &"ning_shuanghua"
+display_name = "守灯人·宁霜华"
+description = "她记得每一次长夜，也记得每一个未能回来的人。"
+actor_scene = ExtResource("1_scene")
+portrait = ExtResource("2_portrait")
+initial_skill_id = &"frost"
+visual_kind = &"character"
+visual_scale = 0.42
+trait_modifiers = {
+"area": 0.1,
+"status_duration": 0.15
+}
+trait_description = "招式范围 +10%，状态持续时间 +15%"
+unlock_condition_id = &"first_evolution"
+unlock_description = "让任意主动招式首次完成进阶"
+unlock_cost = 600
+story_route_id = &"keeper_ning"
+accent = Color(0.43137255, 0.83137256, 1, 1)
+sort_order = 2

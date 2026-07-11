@@ -183,13 +183,16 @@ func _resolve_pending_attack() -> void:
 func take_damage(event: DamageEvent) -> void:
 	if dead:
 		return
-	health -= event.amount
+	var received_damage := event.amount
+	if event.source is PlayerActor and is_instance_valid(arena) and arena.run_config is RunConfig:
+		received_damage *= arena.run_config.elite_boss_damage_multiplier
+	health -= received_damage
 	knockback_velocity += event.direction.normalized() * event.knockback * 0.16
 	_set_animation(&"hit")
 	sprite.modulate = Color("fff1f1")
 	var tween := create_tween()
 	tween.tween_property(sprite, "modulate", Color.WHITE, 0.16)
-	arena.show_damage(global_position + Vector2(0, -70), event.amount, Color("ffe6d0"), event.critical)
+	arena.show_damage(global_position + Vector2(0, -70), received_damage, Color("ffe6d0"), event.critical)
 	health_changed.emit(maxf(health, 0.0), max_health)
 	if health <= 0.0:
 		_die()

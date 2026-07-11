@@ -42,8 +42,8 @@ func wave_for_time(elapsed: float) -> WaveDefinition:
 
 func validate() -> PackedStringArray:
 	var errors := _database_errors.duplicate()
-	if skills.size() != 11:
-		errors.append("技能数量应为 11，实际为 %d" % skills.size())
+	if skills.size() != 12:
+		errors.append("技能数量应为 12，实际为 %d" % skills.size())
 	for skill in skills.values():
 		if skill.max_level != 5:
 			errors.append("%s 的最大等级不是 5" % skill.display_name)

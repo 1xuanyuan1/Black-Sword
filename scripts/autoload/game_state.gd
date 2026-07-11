@@ -6,6 +6,8 @@ signal profile_cleared
 signal night_embers_changed(current: int, delta: int)
 signal meta_upgrades_changed(levels: Dictionary)
 signal run_result_submitted(result: RunResult)
+signal character_unlock_available(id: StringName)
+signal character_unlocked(id: StringName)
 
 var current_profile: ProfileData
 var _save_manager_override: Node
@@ -72,12 +74,15 @@ func submit_run_result(result: RunResult) -> Error:
 		if story_event not in next.story_flags:
 			next.story_flags.append(story_event)
 	next.submitted_run_ids.append(run_id)
+	var newly_available := _grant_character_unlock_eligibility(next, result)
 	var error := _save_profile_candidate(next, &"run_result")
 	if error != OK:
 		return error
 	result.earned_night_embers = earned
 	result.submitted = true
 	night_embers_changed.emit(next.night_embers, earned)
+	for id in newly_available:
+		character_unlock_available.emit(id)
 	run_result_submitted.emit(result)
 	return OK
 
@@ -136,6 +141,17 @@ func build_run_config(character_id: StringName = &"") -> RunConfig:
 	if selected.is_empty():
 		selected = &"black_sword" if current_profile == null else current_profile.selected_character_id
 	var config := RunConfig.default_for_character(selected)
+	var character := _database().call("character", selected) as CharacterDefinition
+	if character != null:
+		var traits := character.trait_modifiers
+		config.health_multiplier *= 1.0 + float(traits.get("max_health", 0.0))
+		config.move_speed_multiplier *= 1.0 + float(traits.get("move_speed", 0.0))
+		config.cooldown_multiplier *= 1.0 - float(traits.get("cooldown_reduction", 0.0))
+		config.area_multiplier *= 1.0 + float(traits.get("area", 0.0))
+		config.status_duration_multiplier *= 1.0 + float(traits.get("status_duration", 0.0))
+		config.damage_taken_multiplier *= 1.0 - float(traits.get("damage_reduction", 0.0))
+		config.melee_damage_multiplier *= 1.0 + float(traits.get("melee_damage", 0.0))
+		config.elite_boss_damage_multiplier *= 1.0 + float(traits.get("elite_boss_damage", 0.0))
 	if current_profile == null:
 		return config
 	var attack_level := int(current_profile.meta_upgrades.get("attack", 0))
@@ -146,10 +162,70 @@ func build_run_config(character_id: StringName = &"") -> RunConfig:
 	var health := _database().call("meta_upgrade", &"health") as MetaUpgradeDefinition
 	var insight := _database().call("meta_upgrade", &"insight") as MetaUpgradeDefinition
 	config.attack_multiplier = 1.0 + float(attack.stats(attack_level).get("damage", 0.0))
-	config.health_multiplier = 1.0 + float(health.stats(health_level).get("health", 0.0))
+	config.health_multiplier *= 1.0 + float(health.stats(health_level).get("health", 0.0))
 	config.experience_multiplier = 1.0 + float(insight.stats(insight_level).get("experience", 0.0))
 	config.revive_rank = revive_level
 	return config
+
+
+func is_character_unlocked(id: StringName) -> bool:
+	return current_profile != null and id in current_profile.unlocked_characters
+
+
+func is_character_unlock_available(id: StringName) -> bool:
+	return current_profile != null and id in current_profile.available_character_unlocks
+
+
+func select_character(id: StringName) -> Error:
+	if current_profile == null:
+		return ERR_DOES_NOT_EXIST
+	if _database().call("character", id) == null:
+		return ERR_INVALID_PARAMETER
+	if id not in current_profile.unlocked_characters:
+		return ERR_UNAVAILABLE
+	var next := _clone_current_profile()
+	next.selected_character_id = id
+	return _save_profile_candidate(next, &"character_selected")
+
+
+func unlock_character(id: StringName) -> Error:
+	if current_profile == null:
+		return ERR_DOES_NOT_EXIST
+	var definition := _database().call("character", id) as CharacterDefinition
+	if definition == null or id in current_profile.unlocked_characters:
+		return ERR_INVALID_PARAMETER
+	if id not in current_profile.available_character_unlocks:
+		return ERR_UNAVAILABLE
+	if current_profile.night_embers < definition.unlock_cost:
+		return ERR_CANT_ACQUIRE_RESOURCE
+	var next := _clone_current_profile()
+	next.night_embers -= definition.unlock_cost
+	next.available_character_unlocks.erase(id)
+	next.unlocked_characters.append(id)
+	var error := _save_profile_candidate(next, &"character_unlock")
+	if error != OK:
+		return error
+	night_embers_changed.emit(next.night_embers, -definition.unlock_cost)
+	character_unlocked.emit(id)
+	return OK
+
+
+func _grant_character_unlock_eligibility(profile: ProfileData, result: RunResult) -> Array[StringName]:
+	var granted: Array[StringName] = []
+	for value in _database().call("all_characters").values():
+		var definition := value as CharacterDefinition
+		if definition.id in profile.unlocked_characters or definition.id in profile.available_character_unlocks:
+			continue
+		var eligible := false
+		match definition.unlock_condition_id:
+			&"default": eligible = true
+			&"wave_complete": eligible = result.completed_waves >= definition.unlock_condition_value
+			&"first_evolution": eligible = not result.evolved_skill_ids.is_empty()
+			&"first_victory": eligible = result.victory and result.final_boss_kill
+		if eligible:
+			profile.available_character_unlocks.append(definition.id)
+			granted.append(definition.id)
+	return granted
 
 
 func configure_save_manager_for_tests(manager: Node) -> Error:

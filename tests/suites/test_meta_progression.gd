@@ -65,7 +65,7 @@ func _test_profile_transactions(tree: SceneTree, context: RefCounted) -> void:
 	state.current_profile.meta_upgrades["revive"] = 2
 	manager.save_profile(state.current_profile, &"test_config")
 	var config: RunConfig = state.build_run_config(&"black_sword")
-	context.check(is_equal_approx(config.attack_multiplier, 1.20) and is_equal_approx(config.health_multiplier, 1.10), "攻击与生命等级转换为单局乘数")
+	context.check(is_equal_approx(config.attack_multiplier, 1.20) and is_equal_approx(config.health_multiplier, 1.21), "攻击养成与黑剑客生命特性按乘区转换为单局乘数")
 	context.check(is_equal_approx(config.experience_multiplier, 1.15) and config.revive_rank == 2, "悟性与复生等级写入 RunConfig")
 
 	var before_result: int = state.current_profile.night_embers
@@ -89,6 +89,22 @@ func _test_profile_transactions(tree: SceneTree, context: RefCounted) -> void:
 	context.check(state.reset_meta_upgrades() == OK, "可以免费重置全部局外养成")
 	context.check(state.current_profile.night_embers == before_reset + investment, "重置全额返还实际投入夜烬")
 	context.check(state.current_profile.meta_upgrades.values().all(func(level: Variant) -> bool: return int(level) == 0), "重置后四条养成都回到零级")
+
+	state.current_profile.night_embers = 1900
+	for upgrade_id in ProfileData.META_UPGRADE_MAX_LEVELS:
+		state.current_profile.meta_upgrades[upgrade_id] = ProfileData.META_UPGRADE_MAX_LEVELS[upgrade_id]
+	context.check(manager.save_profile(state.current_profile, &"test_full_meta_seed") == OK, "四项满级且持有 1900 夜烬的 QA 档案合法")
+	state.load_profile(1)
+	context.check(state.meta_investment_total() == 12500, "四项满级累计投入为 12500 夜烬")
+	var full_meta_result := RunResult.new()
+	full_meta_result.run_id = "full-meta-run"
+	full_meta_result.completed_waves = 4
+	full_meta_result.kills = 1028
+	full_meta_result.elapsed_seconds = 394.0
+	context.check(state.submit_run_result(full_meta_result) == OK, "四项满级 QA 档案可以正常保存战斗结算")
+	var after_full_result: int = state.current_profile.night_embers
+	context.check(state.reset_meta_upgrades() == OK, "四项满级 QA 档案可以免费重置")
+	context.check(state.current_profile.night_embers == after_full_result + 12500, "满级重置完整返还 12500 夜烬")
 
 	state.current_profile.night_embers = 0
 	manager.save_profile(state.current_profile, &"test_empty")
@@ -159,11 +175,28 @@ func _test_hub_ui(tree: SceneTree, context: RefCounted) -> void:
 	var attack_effect := main.ui_root.find_child("MetaCurrentEffect_attack", true, false) as RichTextLabel
 	context.check(attack_effect != null and attack_effect.text.contains("最终伤害") and attack_effect.text.contains("+2%"), "养成卡使用玩家可读文案而非原始数据字典")
 	context.check(attack_effect != null and attack_effect.text.contains("[color=#72e6a5]") and attack_effect.text.contains("[font_size=24]"), "当前效果的增益数值使用高亮颜色与放大字号")
+	var before_result_balance: int = GameState.current_profile.night_embers
+	main._show_result(false, 394.0, 42, 1028)
+	var result_text := _collect_label_text(main.modal_overlay)
+	context.check(main.current_run_result != null and main.current_run_result.submitted, "战斗结束界面通过正式路径提交 RunResult")
+	context.check(main.current_run_result.earned_night_embers == 180, "06:34、四波、1028 击杀的失败结算获得 180 夜烬")
+	context.check(GameState.current_profile.night_embers == before_result_balance + 180, "战斗结束结算将夜烬写入当前档位")
+	context.check(result_text.contains("带回夜烬  180") and not result_text.contains("结算保存失败"), "战斗结算界面显示入账结果且不再报 Invalid data")
+	var persisted := SaveManager.load_slot(1)
+	context.check(persisted != null and int(persisted.stats["runs"]) == 1 and int(persisted.stats["total_kills"]) == 1028, "战斗结算统计已写入 JSON 并可重新载入")
+	tree.paused = false
 	main.queue_free()
 	await tree.process_frame
 	GameState.clear_current_profile()
 	SaveManager.reset_storage_root()
 	_cleanup_directory(test_root)
+
+
+func _collect_label_text(root: Node) -> String:
+	var text := ""
+	for child in root.find_children("*", "Label", true, false):
+		text += (child as Label).text + "\n"
+	return text
 
 
 func _cleanup_directory(path: String) -> void:

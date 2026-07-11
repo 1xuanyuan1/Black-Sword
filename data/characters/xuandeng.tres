@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/player_xuandeng.tscn" id="1_scene"]
+[ext_resource type="Texture2D" path="res://assets/actors/characters/xuandeng_portrait.png" id="2_portrait"]
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="3_script"]
+
+[resource]
+script = ExtResource("3_script")
+id = &"xuandeng"
+display_name = "钟魂·玄灯"
+description = "肉身已寂，钟声未休。他在第十二响后等了十六年。"
+actor_scene = ExtResource("1_scene")
+portrait = ExtResource("2_portrait")
+initial_skill_id = &"sun_palm"
+visual_kind = &"character"
+visual_scale = 0.42
+trait_modifiers = {
+"damage_reduction": 0.08,
+"max_health": 0.2,
+"move_speed": -0.05
+}
+trait_description = "最大生命 +20%，受到伤害 -8%，移动速度 -5%"
+unlock_condition_id = &"first_victory"
+unlock_description = "首次击败鬼面剑豪"
+unlock_cost = 900
+story_route_id = &"bell_soul"
+accent = Color(1, 0.69411767, 0.3529412, 1)
+sort_order = 3

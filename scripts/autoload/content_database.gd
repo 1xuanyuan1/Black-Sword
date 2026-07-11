@@ -158,6 +158,14 @@ func _validate_references() -> PackedStringArray:
 			errors.append("角色 %s 缺少 portrait" % character_definition.id)
 		if not _skills.has(character_definition.initial_skill_id):
 			errors.append("角色 %s 的初始技能不存在：%s" % [character_definition.id, character_definition.initial_skill_id])
+		if character_definition.unlock_condition_id not in [&"default", &"wave_complete", &"first_evolution", &"first_victory"]:
+			errors.append("角色 %s 的解锁条件无效：%s" % [character_definition.id, character_definition.unlock_condition_id])
+		if character_definition.unlock_condition_id == &"default" and character_definition.unlock_cost != 0:
+			errors.append("默认角色 %s 不应收取解锁费用" % character_definition.id)
+		if character_definition.unlock_condition_id != &"default" and character_definition.unlock_cost <= 0:
+			errors.append("可解锁角色 %s 的费用必须大于零" % character_definition.id)
+		if character_definition.trait_description.is_empty() or character_definition.trait_modifiers.is_empty():
+			errors.append("角色 %s 缺少固有特性数据" % character_definition.id)
 	for definition in _skills.values():
 		var skill_definition := definition as SkillDefinition
 		if skill_definition.values.size() != skill_definition.max_level or skill_definition.max_level <= 0:

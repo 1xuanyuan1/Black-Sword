@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="CharacterDefinition" format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="1_tae13"]
-[ext_resource type="Texture2D" path="res://assets/actors/hero/hero_actual.png" id="2_limvt"]
+[ext_resource type="Texture2D" path="res://assets/actors/hero/portrait_actual.png" id="2_limvt"]
 [ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="3_cbnmi"]
 
 [resource]
@@ -14,3 +14,14 @@ portrait = ExtResource("2_limvt")
 initial_skill_id = &"black_slash"
 visual_kind = &"hero_actual"
 visual_scale = 0.72
+trait_modifiers = {
+"max_health": 0.1,
+"melee_damage": 0.08
+}
+trait_description = "最大生命 +10%，近身技能伤害 +8%"
+unlock_condition_id = &"default"
+unlock_description = "默认开放"
+unlock_cost = 0
+story_route_id = &"main_shen_yan"
+accent = Color(0.6627451, 0.78039217, 0.9372549, 1)
+sort_order = 0

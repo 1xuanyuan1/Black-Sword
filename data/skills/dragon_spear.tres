@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = &"dragon_spear"
+display_name = "龙胆枪"
+description = "朝最近敌人直刺枪芒，贯穿同一直线上的敌阵。"
+accent = Color(0.7137255, 0.8745098, 1, 1)
+values = Array[Dictionary]([{
+"cooldown": 1.1,
+"damage": 20.0,
+"distance": 150.0,
+"pierce": 3,
+"upgrade": "朝最近目标直刺",
+"width": 22.0
+}, {
+"cooldown": 1.0,
+"damage": 27.0,
+"distance": 165.0,
+"pierce": 4,
+"upgrade": "枪路更长，贯穿 +1",
+"width": 24.0
+}, {
+"cooldown": 0.9,
+"damage": 36.0,
+"distance": 180.0,
+"pierce": 5,
+"side_every": 3,
+"upgrade": "每第三次追加侧向枪影",
+"width": 28.0
+}, {
+"cooldown": 0.8,
+"damage": 48.0,
+"distance": 200.0,
+"pierce": 7,
+"side_every": 3,
+"upgrade": "贯穿与宽度大幅提高",
+"width": 30.0
+}, {
+"cooldown": 0.7,
+"damage": 62.0,
+"distance": 220.0,
+"pierce": 9,
+"side_every": 1,
+"triple": true,
+"upgrade": "化境：梅花三连",
+"width": 34.0
+}])
