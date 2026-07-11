@@ -125,6 +125,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-waves" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_waves")
+	elif "--qa-full-run" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_full_run")
 	elif "--qa-map-boss" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_map_boss")
@@ -243,6 +246,21 @@ func _qa_prepare_waves() -> void:
 	arena.announce("QA 十二波加速：普通波 2.5 秒，小 Boss 自动验收", Color("ffd38a"))
 
 
+func _qa_prepare_full_run() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.25).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.player.invulnerability = 9999.0
+	arena.set_meta("qa_auto_level", true)
+	arena.wave_director.duration_scale = 0.01
+	arena.spawn_director.qa_auto_defeat_bosses = true
+	arena.spawn_director.qa_auto_defeat_delay = 0.08
+	arena.announce("QA V1 full run: accelerated twelve-wave flow and automatic Boss validation", Color("ffd38a"))
+
+
 func _qa_prepare_map_boss() -> void:
 	if not OS.is_debug_build():
 		return
@@ -319,9 +337,7 @@ func _qa_prepare_items() -> void:
 	arena.player.health = arena.player.max_health * 0.45
 	arena.player.health_changed.emit(arena.player.health, arena.player.max_health)
 	for index in range(6):
-		var orb := ExperienceOrb.create(arena, arena.player.global_position + Vector2.from_angle(TAU * float(index) / 6.0) * 150.0, 3)
-		orb.add_to_group("xp_orbs")
-		arena.pickup_layer.add_child(orb)
+		arena.spawn_experience_orb(arena.player.global_position + Vector2.from_angle(TAU * float(index) / 6.0) * 150.0, 3)
 	arena.spawn_enemy(&"corpse", arena.player.global_position + Vector2(230, 0), false)
 	arena.spawn_enemy(&"corpse", arena.player.global_position + Vector2(285, 45), true)
 	var queue: Array[StringName] = [&"healing_salve", &"soul_talisman", &"soul_bell", &"binding_talisman", &"soul_wine"]
@@ -460,7 +476,7 @@ func _show_title() -> void:
 	background.add_child(mist)
 	var portrait := TextureRect.new()
 	portrait.texture = HERO_PORTRAIT
-	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.position = Vector2(750, 190)
@@ -1050,7 +1066,7 @@ func _character_card(definition: CharacterDefinition, display_index: int) -> But
 	card.add_child(column)
 	var portrait := TextureRect.new()
 	portrait.texture = _character_portrait_texture(definition)
-	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR if definition.id == &"black_sword" else CanvasItem.TEXTURE_FILTER_NEAREST
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.custom_minimum_size = Vector2(194, 170)

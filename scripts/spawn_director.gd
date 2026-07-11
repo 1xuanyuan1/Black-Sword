@@ -7,6 +7,7 @@ var spawn_timer := 0.0
 var reinforcements_enabled := false
 var rng := RandomNumberGenerator.new()
 var qa_auto_defeat_bosses := false
+var qa_auto_defeat_delay := 0.8
 
 
 func setup(new_arena: Arena) -> void:
@@ -31,7 +32,7 @@ func complete_wave() -> void:
 func process(delta: float) -> void:
 	if current_wave == null or not reinforcements_enabled or not arena.run_active:
 		return
-	if qa_auto_defeat_bosses and current_wave.kind != WaveDefinition.WaveKind.NORMAL and arena.wave_director.elapsed_in_state >= 0.8:
+	if qa_auto_defeat_bosses and current_wave.kind != WaveDefinition.WaveKind.NORMAL and arena.wave_director.elapsed_in_state >= qa_auto_defeat_delay:
 		if is_instance_valid(arena.miniboss):
 			arena.miniboss.take_damage(DamageEvent.create(999999.0, arena.player))
 		elif is_instance_valid(arena.boss):

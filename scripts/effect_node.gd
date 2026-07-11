@@ -10,27 +10,50 @@ var direction := Vector2.RIGHT
 var arc := PI * 2.0
 var line_end := Vector2.ZERO
 var label_text := ""
+var arena: Node
+var retired := false
 
 
 static func create(kind: StringName, position_value: Vector2, options: Dictionary = {}) -> EffectNode:
 	var effect := EffectNode.new()
-	effect.effect_kind = kind
-	effect.global_position = position_value
-	effect.duration = options.get("duration", 0.5)
-	effect.radius = options.get("radius", 80.0)
-	effect.color = options.get("color", Color.WHITE)
-	effect.direction = options.get("direction", Vector2.RIGHT)
-	effect.arc = options.get("arc", PI * 2.0)
-	effect.line_end = options.get("line_end", Vector2.ZERO)
-	effect.label_text = options.get("text", "")
-	effect.z_index = options.get("z", 20)
+	effect.configure(null, kind, position_value, options)
 	return effect
+
+
+func configure(new_arena: Node, kind: StringName, position_value: Vector2, options: Dictionary = {}) -> void:
+	arena = new_arena
+	effect_kind = kind
+	global_position = position_value
+	duration = options.get("duration", 0.5)
+	radius = options.get("radius", 80.0)
+	color = options.get("color", Color.WHITE)
+	direction = options.get("direction", Vector2.RIGHT)
+	arc = options.get("arc", PI * 2.0)
+	line_end = options.get("line_end", Vector2.ZERO)
+	label_text = options.get("text", "")
+	z_index = options.get("z", 20)
+	elapsed = 0.0
+	retired = false
+	visible = true
+	set_process(true)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
 	elapsed += delta
 	queue_redraw()
 	if elapsed >= duration:
+		retire()
+
+
+func retire() -> void:
+	if retired:
+		return
+	retired = true
+	set_process(false)
+	if is_instance_valid(arena) and arena.has_method("recycle_runtime_node"):
+		arena.call_deferred("recycle_runtime_node", self, &"effect")
+	else:
 		queue_free()
 
 

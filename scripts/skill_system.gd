@@ -240,7 +240,7 @@ func _cast_nightfall_unbound(stats: Dictionary) -> void:
 	nightfall_casts += 1
 	var radius_value := float(stats.get("range", 178.0)) * area_multiplier()
 	var damage := float(stats.get("damage", 82.0)) * damage_multiplier() * melee_damage_multiplier()
-	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.32, "color": Color("eaf4ff")}))
+	arena.spawn_effect(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.32, "color": Color("eaf4ff")})
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			enemy.take_damage(make_player_damage_event(damage, player.global_position.direction_to(enemy.global_position), 125.0, [&"slash", &"evolved"]))
@@ -254,7 +254,7 @@ func _delayed_night_rift(radius_value: float, damage: float) -> void:
 	await get_tree().create_timer(0.22).timeout
 	if not is_instance_valid(player) or not arena.run_active:
 		return
-	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.4, "color": Color("8db8ff")}))
+	arena.spawn_effect(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.4, "color": Color("8db8ff")})
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			enemy.take_damage(make_player_damage_event(damage, player.global_position.direction_to(enemy.global_position), 80.0, [&"rift", &"evolved"]))
@@ -267,7 +267,7 @@ func _cast_flying_thunder_chain(stats: Dictionary) -> void:
 	for index in range(count):
 		var target = targets[index]
 		var radius_value := float(stats.get("radius", 118.0)) * area_multiplier()
-		arena.add_effect(EffectNode.create(&"pulse", target.global_position, {"radius": radius_value, "duration": 0.28, "color": Color("69dcff")}))
+		arena.spawn_effect(&"pulse", target.global_position, {"radius": radius_value, "duration": 0.28, "color": Color("69dcff")})
 		for enemy in arena.enemies.duplicate():
 			if is_instance_valid(enemy) and not enemy.dead and target.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 				enemy.take_damage(make_player_damage_event(float(stats.get("damage", 92.0)) * damage_multiplier(), target.global_position.direction_to(enemy.global_position), 95.0, [&"rasengan", &"evolved"]))
@@ -283,13 +283,13 @@ func _cast_celestial_sword_river(stats: Dictionary) -> void:
 	var count := int(stats.get("count", 7)) + quantity_bonus()
 	for index in range(count):
 		var angle := (float(index) - float(count - 1) * 0.5) * 0.12
-		arena.add_projectile(CombatProjectile.create({
+		arena.spawn_projectile({
 			"arena": arena, "owner": player, "position": player.global_position,
 			"direction": direction.rotated(angle), "speed": float(stats.get("speed", 590.0)) * projectile_speed_multiplier(),
 			"damage": float(stats.get("damage", 58.0)) * damage_multiplier(), "radius": 14.0,
 			"pierce": int(stats.get("pierce", 6)) + projectile_pierce_bonus(), "lifetime": 3.0 * projectile_lifetime_multiplier(),
 			"kind": &"sword", "homing": true, "returning": true, "bounces": 3, "knockback": 45.0,
-		}))
+		})
 	arena.play_sfx(&"magic")
 
 
@@ -334,7 +334,7 @@ func _cast_rasengan(stats: Dictionary) -> void:
 	var count: int = int(stats.get("count", 1)) + quantity_bonus()
 	for i in range(count):
 		var offset: float = (float(i) - float(count - 1) * 0.5) * 0.20
-		arena.add_projectile(CombatProjectile.create({
+		arena.spawn_projectile({
 			"arena": arena,
 			"owner": player,
 			"position": player.global_position + base_direction * 22.0,
@@ -352,7 +352,7 @@ func _cast_rasengan(stats: Dictionary) -> void:
 			"explosion_damage_multiplier": float(stats.get("aoe_damage", 0.0)),
 			"split_count": int(stats.get("split_count", 0)),
 			"split_damage_multiplier": float(stats.get("split_damage", 0.5)),
-		}))
+		})
 	arena.play_sfx(&"magic")
 
 
@@ -371,7 +371,7 @@ func _perform_slash(direction: Vector2, stats: Dictionary) -> void:
 	var radius: float = float(stats.get("range", 100.0)) * area_multiplier()
 	var arc_value: float = stats.get("arc", 2.0)
 	var damage: float = stats.get("damage", 10.0) * damage_multiplier() * melee_damage_multiplier()
-	arena.add_effect(EffectNode.create(&"slash", player.global_position, {"direction": direction, "radius": radius, "arc": arc_value, "duration": 0.28, "color": Color("edf5ff")}))
+	arena.spawn_effect(&"slash", player.global_position, {"direction": direction, "radius": radius, "arc": arc_value, "duration": 0.28, "color": Color("edf5ff")})
 	for enemy in arena.enemies.duplicate():
 		if not is_instance_valid(enemy) or enemy.dead:
 			continue
@@ -396,14 +396,14 @@ func _cast_flying_sword(stats: Dictionary) -> void:
 	var count: int = int(stats.get("count", 1)) + quantity_bonus()
 	for i in range(count):
 		var offset := (float(i) - float(count - 1) * 0.5) * 0.16
-		arena.add_projectile(CombatProjectile.create({
+		arena.spawn_projectile({
 			"arena": arena, "owner": player, "position": player.global_position,
 			"direction": base_direction.rotated(offset), "speed": float(stats.get("speed", 400.0)) * projectile_speed_multiplier(),
 			"damage": float(stats.get("damage", 15.0)) * damage_multiplier(), "radius": 13.0,
 			"pierce": int(stats.get("pierce", 1)) + projectile_pierce_bonus(), "lifetime": 2.1 * projectile_lifetime_multiplier(), "kind": &"sword",
 			"homing": true, "returning": stats.get("returning", false), "knockback": 42.0,
 			"bounces": int(stats.get("bounces", 0)),
-		}))
+		})
 	arena.play_sfx(&"magic")
 
 
@@ -419,14 +419,14 @@ func _cast_sword_wave(stats: Dictionary) -> void:
 
 
 func _spawn_wave(direction: Vector2, stats: Dictionary) -> void:
-	arena.add_projectile(CombatProjectile.create({
+	arena.spawn_projectile({
 		"arena": arena, "owner": player, "position": player.global_position,
 		"direction": direction, "speed": float(stats.get("speed", 450.0)) * projectile_speed_multiplier(),
 		"damage": float(stats.get("damage", 22.0)) * damage_multiplier(),
 		"radius": float(stats.get("width", 24.0)), "pierce": int(stats.get("pierce", 4)) + projectile_pierce_bonus(),
 		"lifetime": 2.0 * projectile_lifetime_multiplier(), "kind": &"wave", "knockback": 70.0,
 		"bounces": int(stats.get("bounces", 0)),
-	}))
+	})
 	player.play_attack(direction)
 	arena.play_sfx(&"slash")
 
@@ -506,7 +506,7 @@ func _cast_thunder(stats: Dictionary) -> void:
 				continue
 			hit[id] = true
 			var line: Vector2 = current.global_position - current_position
-			arena.add_effect(EffectNode.create(&"lightning", current_position, {"line_end": line, "duration": 0.26, "color": Color("fff36b")}))
+			arena.spawn_effect(&"lightning", current_position, {"line_end": line, "duration": 0.26, "color": Color("fff36b")})
 			current.take_damage(make_player_damage_event(float(stats.get("damage", 24.0)) * damage_multiplier(), line.normalized(), 35.0, [&"lightning"]))
 			current_position = current.global_position
 			current = _nearest_unhit(current_position, available, hit)
@@ -534,7 +534,7 @@ func _cast_frost(stats: Dictionary) -> void:
 	var center: Vector2 = target.global_position
 	var radius_value: float = float(stats.get("radius", 100.0)) * area_multiplier()
 	var duration_value: float = float(stats.get("duration", 2.0)) * status_duration_multiplier()
-	arena.add_effect(EffectNode.create(&"frost", center, {"radius": radius_value, "duration": duration_value, "color": Color("7edbff"), "z": 3}))
+	arena.spawn_effect(&"frost", center, {"radius": radius_value, "duration": duration_value, "color": Color("7edbff"), "z": 3})
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and center.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			enemy.take_damage(make_player_damage_event(float(stats.get("damage", 15.0)) * damage_multiplier(), center.direction_to(enemy.global_position), 22.0, [&"frost"]))
@@ -550,7 +550,7 @@ func _cast_sun_palm(stats: Dictionary) -> void:
 
 func _perform_palm(stats: Dictionary, scale_value: float) -> void:
 	var radius_value: float = float(stats.get("radius", 100.0)) * scale_value * area_multiplier()
-	arena.add_effect(EffectNode.create(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.45, "color": Color("ff984c")}))
+	arena.spawn_effect(&"pulse", player.global_position, {"radius": radius_value, "duration": 0.45, "color": Color("ff984c")})
 	for enemy in arena.enemies.duplicate():
 		if is_instance_valid(enemy) and not enemy.dead and player.global_position.distance_to(enemy.global_position) <= radius_value + enemy.hit_radius:
 			var direction := player.global_position.direction_to(enemy.global_position)
@@ -587,10 +587,10 @@ func _resolve_sword_rain(center: Vector2, stats: Dictionary) -> void:
 	var count: int = int(stats.get("count", 5)) + quantity_bonus()
 	for i in range(mini(count, targets.size())):
 		var enemy = targets[i]
-		arena.add_effect(EffectNode.create(&"sword", enemy.global_position + Vector2(0, -22), {"duration": 0.38, "color": Color("d8c9ff")}))
+		arena.spawn_effect(&"sword", enemy.global_position + Vector2(0, -22), {"duration": 0.38, "color": Color("d8c9ff")})
 		enemy.take_damage(make_player_damage_event(float(stats.get("damage", 18.0)) * damage_multiplier(), Vector2.DOWN, 40.0, [&"sword_rain"]))
 	if stats.get("giant", false):
-		arena.add_effect(EffectNode.create(&"sword", center + Vector2(0, -30), {"duration": 0.62, "color": Color("fff2cf")}))
+		arena.spawn_effect(&"sword", center + Vector2(0, -30), {"duration": 0.62, "color": Color("fff2cf")})
 		for enemy in targets:
 			if is_instance_valid(enemy):
 				enemy.take_damage(make_player_damage_event(float(stats.get("damage", 18.0)) * 0.55 * damage_multiplier(), center.direction_to(enemy.global_position), 70.0, [&"giant_sword"]))
@@ -619,13 +619,13 @@ func _perform_dragon_spear(direction: Vector2, stats: Dictionary) -> int:
 	var width: float = float(stats.get("width", 22.0)) * area_multiplier()
 	var damage: float = float(stats.get("damage", 20.0)) * damage_multiplier() * melee_damage_multiplier()
 	var max_targets: int = int(stats.get("pierce", 3))
-	arena.add_effect(EffectNode.create(&"spear", player.global_position, {
+	arena.spawn_effect(&"spear", player.global_position, {
 		"direction": direction,
 		"line_end": direction.normalized() * length,
 		"radius": width,
 		"duration": 0.24,
 		"color": Color("b9e5ff"),
-	}))
+	})
 	var candidates: Array = []
 	for enemy in arena.enemies.duplicate():
 		if not is_instance_valid(enemy) or enemy.dead:

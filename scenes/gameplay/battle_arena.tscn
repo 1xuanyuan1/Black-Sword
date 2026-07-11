@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena.gd" id="1_arena"]
 [ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_map.tscn" id="2_map"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/run_controller.gd" id="7_run"]
 [ext_resource type="Script" path="res://scripts/wave_director.gd" id="8_wave"]
 [ext_resource type="Script" path="res://scripts/spawn_director.gd" id="9_spawn"]
+[ext_resource type="Script" path="res://scripts/runtime_object_pool.gd" id="10_pool"]
 
 [node name="BattleArena" type="Node2D"]
 editor_description = "完整战斗场景：组装地图、玩家、玩法系统及所有运行时对象层。"
@@ -36,6 +37,10 @@ editor_description = "伤害数字、攻击范围和技能特效的运行时容�
 
 [node name="GameplaySystems" type="Node" parent="."]
 editor_description = "不直接显示的战斗规则和系统容器。"
+
+[node name="RuntimeObjectPool" type="Node" parent="GameplaySystems"]
+editor_description = "Reuse projectiles, experience orbs, and short-lived effects during dense waves."
+script = ExtResource("10_pool")
 
 [node name="SkillController" type="Node" parent="GameplaySystems"]
 editor_description = "管理主动技能冷却与招式执行；槽位、等级和候选由 SkillInventory 持有。"

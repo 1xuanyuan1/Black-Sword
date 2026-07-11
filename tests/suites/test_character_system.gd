@@ -24,6 +24,9 @@ func _test_character_definitions(context: RefCounted) -> void:
 	}
 	context.check(ContentDatabase.all_characters().size() == 5, "ContentDatabase 提供五名角色定义")
 	context.check(ContentDatabase.character(&"black_sword").portrait.resource_path == "res://assets/actors/hero/portrait_actual.png", "黑剑客角色卡使用独立立绘而不是战斗动作图")
+	var black_sword_portrait := ContentDatabase.character(&"black_sword").portrait.get_image()
+	context.check(black_sword_portrait != null and black_sword_portrait.get_size() == Vector2i(768, 768), "黑剑客新立绘使用 768×768 方形展示画布")
+	context.check(black_sword_portrait != null and black_sword_portrait.detect_alpha() != Image.ALPHA_NONE and black_sword_portrait.get_pixel(0, 0).a == 0.0, "黑剑客新立绘拥有透明背景与透明边角")
 	for character_id in expected:
 		var definition := ContentDatabase.character(character_id)
 		context.check(definition != null and definition.initial_skill_id == expected[character_id][0], "角色 %s 的初始技能正确" % character_id)

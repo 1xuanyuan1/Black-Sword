@@ -202,7 +202,7 @@ func _resolve_pending_attack() -> void:
 	set_state(BossState.ATTACK)
 	match pending_attack:
 		&"slash":
-			arena.add_effect(EffectNode.create(&"slash", global_position, {"direction": pending_direction, "radius": 155.0, "arc": 1.72, "duration": 0.35, "color": Color("ffdbbe")}))
+			arena.spawn_effect(&"slash", global_position, {"direction": pending_direction, "radius": 155.0, "arc": 1.72, "duration": 0.35, "color": Color("ffdbbe")})
 			var to_player := global_position.direction_to(arena.player.global_position)
 			if global_position.distance_to(arena.player.global_position) <= 155.0 and absf(pending_direction.angle_to(to_player)) <= 0.86:
 				arena.player.take_damage(DamageEvent.create(21.0 + phase * 4.0, self, pending_direction, 210.0, false, [&"boss_slash"]))
@@ -220,7 +220,7 @@ func _resolve_pending_attack() -> void:
 			var count := 12 + phase * 3
 			for i in range(count):
 				arena.spawn_enemy_projectile(global_position, Vector2.from_angle(TAU * float(i) / float(count)), 9.0 + phase * 2.0, self, 260.0)
-			arena.add_effect(EffectNode.create(&"pulse", global_position, {"radius": 190.0, "duration": 0.55, "color": Color("ff5b75")}))
+			arena.spawn_effect(&"pulse", global_position, {"radius": 190.0, "duration": 0.55, "color": Color("ff5b75")})
 			arena.play_sfx(&"magic")
 	pending_attack = &""
 	if charge_time <= 0.0:

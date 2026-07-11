@@ -241,7 +241,7 @@ func _run_baseline() -> void:
 	})
 	arena.add_projectile(blocked_projectile)
 	await create_timer(0.32).timeout
-	_check(not is_instance_valid(blocked_projectile), "无反弹次数的弹丸撞树干后销毁")
+	_check(not is_instance_valid(blocked_projectile) or blocked_projectile.retired, "无反弹次数的弹丸撞树干后退出活动层")
 	_check(arena.skill_system.levels.get(&"black_slash", 0) == 1, "开局自带黑剑·横扫")
 	var system := arena.skill_system
 	system.upgrade(&"flying_sword")

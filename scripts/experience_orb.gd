@@ -6,16 +6,27 @@ var value := 1
 var velocity := Vector2.ZERO
 var elapsed := 0.0
 var force_magnet := false
+var retired := false
 
 
 static func create(new_arena: Node, at_position: Vector2, xp_value: int) -> ExperienceOrb:
 	var orb := ExperienceOrb.new()
-	orb.arena = new_arena
-	orb.global_position = at_position
-	orb.value = xp_value
-	orb.velocity = Vector2.from_angle(randf() * TAU) * randf_range(25.0, 70.0)
-	orb.z_index = 7
+	orb.configure(new_arena, at_position, xp_value)
 	return orb
+
+
+func configure(new_arena: Node, at_position: Vector2, xp_value: int) -> void:
+	arena = new_arena
+	global_position = at_position
+	value = xp_value
+	velocity = Vector2.from_angle(randf() * TAU) * randf_range(25.0, 70.0)
+	elapsed = 0.0
+	force_magnet = false
+	retired = false
+	z_index = 7
+	visible = true
+	set_process(true)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
@@ -34,13 +45,24 @@ func _process(delta: float) -> void:
 		global_position = global_position.move_toward(arena.player.global_position, magnet_speed * delta)
 	if distance < 24.0:
 		arena.collect_xp(value)
-		queue_free()
+		retire()
 	queue_redraw()
 
 
 func pull_to_player() -> void:
 	force_magnet = true
 	velocity = Vector2.ZERO
+
+
+func retire() -> void:
+	if retired:
+		return
+	retired = true
+	set_process(false)
+	if is_instance_valid(arena) and arena.has_method("recycle_runtime_node"):
+		arena.call_deferred("recycle_runtime_node", self, &"experience_orb")
+	else:
+		queue_free()
 
 
 func _draw() -> void:

@@ -30,6 +30,7 @@ const MINIBOSS_SCENES: Dictionary = {
 @onready var pickup_layer: Node2D = $PickupLayer
 @onready var projectile_layer: Node2D = $ProjectileLayer
 @onready var effect_layer: Node2D = $EffectLayer
+@onready var runtime_pool: RuntimeObjectPool = $GameplaySystems/RuntimeObjectPool
 @onready var skill_controller: SkillController = $GameplaySystems/SkillController
 @onready var item_drop_system: ItemDropSystem = $GameplaySystems/ItemDropSystem
 @onready var evolution_system: EvolutionSystem = $GameplaySystems/EvolutionSystem
@@ -233,7 +234,7 @@ func _resolve_delayed_sigil(position: Vector2, damage: float, source: Node) -> v
 	await get_tree().create_timer(0.72).timeout
 	if not run_active:
 		return
-	add_effect(EffectNode.create(&"pulse", position, {"radius": 72.0, "duration": 0.36, "color": Color("d66a52")}))
+	spawn_effect(&"pulse", position, {"radius": 72.0, "duration": 0.36, "color": Color("d66a52")})
 	if is_instance_valid(player) and position.distance_to(player.global_position) <= 90.0:
 		var damage_source: Node = source if is_instance_valid(source) else null
 		player.take_damage(DamageEvent.create(damage, damage_source, position.direction_to(player.global_position), 95.0, false, [&"sigil"]))
@@ -289,9 +290,7 @@ func _on_enemy_defeated(enemy: EnemyActor, xp_value: int, death_position: Vector
 	item_drop_system.on_enemy_defeated(enemy, death_position)
 	kills += 1
 	if get_tree().get_nodes_in_group("xp_orbs").size() < 220:
-		var orb := ExperienceOrb.create(self, death_position, xp_value)
-		orb.add_to_group("xp_orbs")
-		pickup_layer.add_child(orb)
+		spawn_experience_orb(death_position, xp_value)
 	else:
 		collect_xp(xp_value)
 
@@ -431,38 +430,83 @@ func active_enemy_count() -> int:
 
 
 func add_effect(effect: EffectNode) -> void:
+	effect.arena = self
 	effect_layer.add_child(effect)
 
 
 func add_projectile(projectile: CombatProjectile) -> void:
 	if get_tree().get_nodes_in_group("projectiles").size() >= 200:
+		projectile.queue_free()
 		return
+	projectile.arena = self
 	projectile.add_to_group("projectiles")
 	projectile_layer.add_child(projectile)
 
 
+func spawn_effect(kind: StringName, position: Vector2, options: Dictionary = {}) -> EffectNode:
+	var effect := runtime_pool.acquire(&"effect") as EffectNode
+	if effect == null:
+		return null
+	effect_layer.add_child(effect)
+	effect.configure(self, kind, position, options)
+	return effect
+
+
+func spawn_projectile(options: Dictionary) -> CombatProjectile:
+	if get_tree().get_nodes_in_group("projectiles").size() >= 200:
+		return null
+	var projectile := runtime_pool.acquire(&"projectile") as CombatProjectile
+	if projectile == null:
+		return null
+	projectile_layer.add_child(projectile)
+	var configured := options.duplicate()
+	configured["arena"] = self
+	projectile.configure(configured)
+	projectile.add_to_group("projectiles")
+	return projectile
+
+
+func spawn_experience_orb(position: Vector2, xp_value: int) -> ExperienceOrb:
+	if get_tree().get_nodes_in_group("xp_orbs").size() >= 220:
+		collect_xp(xp_value)
+		return null
+	var orb := runtime_pool.acquire(&"experience_orb") as ExperienceOrb
+	if orb == null:
+		return null
+	pickup_layer.add_child(orb)
+	orb.configure(self, position, xp_value)
+	orb.add_to_group("xp_orbs")
+	return orb
+
+
+func recycle_runtime_node(instance: Node, kind: StringName) -> void:
+	if not is_instance_valid(instance) or not is_instance_valid(runtime_pool):
+		return
+	runtime_pool.recycle(kind, instance)
+
+
 func spawn_enemy_projectile(position: Vector2, direction: Vector2, damage: float, owner_node: Node, speed: float = 250.0) -> void:
-	add_projectile(CombatProjectile.create({
+	spawn_projectile({
 		"arena": self, "owner": owner_node, "position": position, "direction": direction,
 		"speed": speed, "damage": damage, "radius": 11.0, "lifetime": 3.2,
 		"kind": &"orb", "hostile": true, "knockback": 90.0,
-	}))
+	})
 
 
 func show_damage(position: Vector2, amount: float, color: Color, critical: bool = false) -> void:
-	add_effect(EffectNode.create(&"damage_text", position, {"text": "%s%d" % ["!" if critical else "", roundi(amount)], "duration": 0.65, "color": color, "z": 40}))
+	spawn_effect(&"damage_text", position, {"text": "%s%d" % ["!" if critical else "", roundi(amount)], "duration": 0.65, "color": color, "z": 40})
 
 
 func telegraph_circle(position: Vector2, radius: float, duration: float, color: Color = Color("ff485e")) -> void:
-	add_effect(EffectNode.create(&"warning_circle", position, {"radius": radius, "duration": duration, "color": color, "z": 4}))
+	spawn_effect(&"warning_circle", position, {"radius": radius, "duration": duration, "color": color, "z": 4})
 
 
 func telegraph_line(position: Vector2, direction: Vector2, width: float, length: float, duration: float) -> void:
-	add_effect(EffectNode.create(&"warning_line", position, {"direction": direction, "radius": width, "line_end": direction.normalized() * length, "duration": duration, "color": Color("ff485e"), "z": 4}))
+	spawn_effect(&"warning_line", position, {"direction": direction, "radius": width, "line_end": direction.normalized() * length, "duration": duration, "color": Color("ff485e"), "z": 4})
 
 
 func telegraph_cone(position: Vector2, direction: Vector2, radius: float, arc: float, duration: float) -> void:
-	add_effect(EffectNode.create(&"warning_cone", position, {"direction": direction, "radius": radius, "arc": arc, "duration": duration, "color": Color("ff485e"), "z": 4}))
+	spawn_effect(&"warning_cone", position, {"direction": direction, "radius": radius, "arc": arc, "duration": duration, "color": Color("ff485e"), "z": 4})
 
 
 func announce(text: String, color: Color = Color.WHITE) -> void:

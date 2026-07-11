@@ -76,7 +76,7 @@ func _delayed_blast(radius: float, damage: float, color: Color) -> void:
 	await get_tree().create_timer(0.58).timeout
 	if dead or not arena.run_active:
 		return
-	arena.add_effect(EffectNode.create(&"pulse", global_position, {"radius": radius, "duration": 0.4, "color": color}))
+	arena.spawn_effect(&"pulse", global_position, {"radius": radius, "duration": 0.4, "color": color})
 	if global_position.distance_to(arena.player.global_position) <= radius + 18.0:
 		arena.player.take_damage(DamageEvent.create(damage, self, global_position.direction_to(arena.player.global_position), 190.0, false, [&"miniboss"]))
 

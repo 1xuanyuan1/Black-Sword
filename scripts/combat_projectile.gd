@@ -26,32 +26,48 @@ var explosion_damage_multiplier := 0.0
 var split_count := 0
 var split_damage_multiplier := 0.5
 var impact_triggered := false
+var retired := false
 
 
 static func create(options: Dictionary) -> CombatProjectile:
 	var projectile := CombatProjectile.new()
-	projectile.arena = options.get("arena")
-	projectile.owner_node = options.get("owner")
-	projectile.global_position = options.get("position", Vector2.ZERO)
-	projectile.direction = options.get("direction", Vector2.RIGHT).normalized()
-	projectile.speed = options.get("speed", 360.0)
-	projectile.damage = options.get("damage", 10.0)
-	projectile.radius = options.get("radius", 14.0)
-	projectile.lifetime = options.get("lifetime", 2.0)
-	projectile.pierce = options.get("pierce", 0)
-	projectile.projectile_kind = options.get("kind", &"sword")
-	projectile.hostile = options.get("hostile", false)
-	projectile.homing = options.get("homing", false)
-	projectile.returning = options.get("returning", false)
-	projectile.knockback = options.get("knockback", 30.0)
-	projectile.bounces_remaining = options.get("bounces", 0)
-	projectile.turn_speed = options.get("turn_speed", 5.0)
-	projectile.explosion_radius = options.get("explosion_radius", 0.0)
-	projectile.explosion_damage_multiplier = options.get("explosion_damage_multiplier", 0.0)
-	projectile.split_count = options.get("split_count", 0)
-	projectile.split_damage_multiplier = options.get("split_damage_multiplier", 0.5)
-	projectile.z_index = 12
+	projectile.configure(options)
 	return projectile
+
+
+func configure(options: Dictionary) -> void:
+	arena = options.get("arena")
+	owner_node = options.get("owner")
+	global_position = options.get("position", Vector2.ZERO)
+	direction = Vector2(options.get("direction", Vector2.RIGHT)).normalized()
+	speed = options.get("speed", 360.0)
+	damage = options.get("damage", 10.0)
+	radius = options.get("radius", 14.0)
+	lifetime = options.get("lifetime", 2.0)
+	pierce = options.get("pierce", 0)
+	projectile_kind = options.get("kind", &"sword")
+	hostile = options.get("hostile", false)
+	homing = options.get("homing", false)
+	returning = options.get("returning", false)
+	knockback = options.get("knockback", 30.0)
+	bounces_remaining = options.get("bounces", 0)
+	turn_speed = options.get("turn_speed", 5.0)
+	explosion_radius = options.get("explosion_radius", 0.0)
+	explosion_damage_multiplier = options.get("explosion_damage_multiplier", 0.0)
+	split_count = options.get("split_count", 0)
+	split_damage_multiplier = options.get("split_damage_multiplier", 0.5)
+	elapsed = 0.0
+	returned = false
+	hit_ids.clear()
+	bounce_count = 0
+	homing_lockout = 0.0
+	impact_triggered = false
+	retired = false
+	rotation = 0.0
+	z_index = 12
+	visible = true
+	set_physics_process(true)
+	queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
@@ -77,7 +93,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_check_enemy_hits()
 	if elapsed >= lifetime or not arena.bounds.grow(180.0).has_point(global_position):
-		queue_free()
+		retire()
 
 
 func _move_with_world_collision(motion: Vector2) -> bool:
@@ -100,10 +116,10 @@ func _move_with_world_collision(motion: Vector2) -> bool:
 		direction = direction.bounce(hit_normal).normalized()
 		global_position = hit_position + hit_normal * maxf(3.0, radius * 0.22)
 		homing_lockout = 0.22
-		arena.add_effect(EffectNode.create(&"pulse", hit_position, {"radius": 22.0, "duration": 0.18, "color": Color("9eeeff")}))
+		arena.spawn_effect(&"pulse", hit_position, {"radius": 22.0, "duration": 0.18, "color": Color("9eeeff")})
 		return false
-	arena.add_effect(EffectNode.create(&"pulse", hit_position, {"radius": 14.0, "duration": 0.13, "color": Color("c6e9ff") if not hostile else Color("ff7777")}))
-	queue_free()
+	arena.spawn_effect(&"pulse", hit_position, {"radius": 14.0, "duration": 0.13, "color": Color("c6e9ff") if not hostile else Color("ff7777")})
+	retire()
 	return true
 
 
@@ -124,7 +140,7 @@ func _check_enemy_hits() -> void:
 				_trigger_rasengan_impact(enemy)
 			pierce -= 1
 			if pierce < 0:
-				queue_free()
+				retire()
 				return
 
 
@@ -133,7 +149,7 @@ func _trigger_rasengan_impact(primary_enemy: Node) -> void:
 		return
 	impact_triggered = true
 	var visual_radius: float = maxf(radius * 1.65, explosion_radius)
-	arena.add_effect(EffectNode.create(&"pulse", global_position, {"radius": visual_radius, "duration": 0.30, "color": Color("69d8ff")}))
+	arena.spawn_effect(&"pulse", global_position, {"radius": visual_radius, "duration": 0.30, "color": Color("69d8ff")})
 	if explosion_radius > 0.0 and explosion_damage_multiplier > 0.0:
 		for other_enemy in arena.enemies.duplicate():
 			if not is_instance_valid(other_enemy) or other_enemy == primary_enemy or other_enemy.dead:
@@ -153,7 +169,7 @@ func _trigger_rasengan_impact(primary_enemy: Node) -> void:
 func _spawn_rasengan_fragments() -> void:
 	for i in range(split_count):
 		var spread: float = remap(float(i), 0.0, float(maxi(split_count - 1, 1)), -0.82, 0.82)
-		arena.add_projectile(CombatProjectile.create({
+		arena.spawn_projectile({
 			"arena": arena,
 			"owner": owner_node,
 			"position": global_position,
@@ -169,7 +185,7 @@ func _spawn_rasengan_fragments() -> void:
 			"knockback": knockback * 0.55,
 			# 分裂弹不再继续分裂，避免指数增长。
 			"split_count": 0,
-		}))
+		})
 
 
 func _check_player_hit() -> void:
@@ -178,6 +194,17 @@ func _check_player_hit() -> void:
 	if global_position.distance_squared_to(arena.player.global_position) <= pow(radius + 18.0, 2.0):
 		var damage_source: Node = owner_node if is_instance_valid(owner_node) else null
 		arena.player.take_damage(DamageEvent.create(damage, damage_source, direction, knockback, false, [&"enemy_projectile"]))
+		retire()
+
+
+func retire() -> void:
+	if retired:
+		return
+	retired = true
+	set_physics_process(false)
+	if is_instance_valid(arena) and arena.has_method("recycle_runtime_node"):
+		arena.call_deferred("recycle_runtime_node", self, &"projectile")
+	else:
 		queue_free()
 
 
