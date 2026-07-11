@@ -20,6 +20,7 @@
 
 - `framework`：套件发现、异步执行和退出码。
 - `baseline`：步骤 0 之前已有的完整 Demo 回归测试。
+- `content_database`：Resource 内容加载、ID、引用完整性、旧数值和 `ContentRegistry` 兼容层。
 
 ## 编写约定
 

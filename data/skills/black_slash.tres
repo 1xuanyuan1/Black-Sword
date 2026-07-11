@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_5eujc"]
+
+[resource]
+script = ExtResource("1_5eujc")
+id = &"black_slash"
+display_name = "黑剑·横扫"
+description = "斩出凌厉剑弧，专破近身群敌。"
+accent = Color(0.84705883, 0.89411765, 1, 1)
+values = Array[Dictionary]([{
+"arc": 1.8,
+"cooldown": 0.9,
+"damage": 18.0,
+"range": 92.0,
+"upgrade": "基础剑式"
+}, {
+"arc": 1.95,
+"cooldown": 0.82,
+"damage": 25.0,
+"range": 102.0,
+"upgrade": "剑弧更宽，伤害提升"
+}, {
+"arc": 2.1,
+"cooldown": 0.74,
+"damage": 33.0,
+"range": 112.0,
+"upgrade": "出剑更快"
+}, {
+"arc": 2.25,
+"cooldown": 0.66,
+"damage": 44.0,
+"range": 124.0,
+"upgrade": "剑势大幅增强"
+}, {
+"arc": 2.4,
+"cooldown": 0.58,
+"damage": 54.0,
+"double": true,
+"range": 132.0,
+"upgrade": "化境：双重剑弧"
+}])

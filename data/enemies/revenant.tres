@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/revenant.tscn" id="1_1jnbk"]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="2_f14ve"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/revenant.png" id="3_grkk3"]
+
+[resource]
+script = ExtResource("2_f14ve")
+id = &"revenant"
+display_name = "重甲怨卒"
+max_health = 110.0
+speed = 54.0
+damage = 14.0
+xp_value = 5
+attack_range = 42.0
+attack_cooldown = 1.7
+texture = ExtResource("3_grkk3")
+actor_scene = ExtResource("1_1jnbk")
+visual_kind = &"character"
+behavior = &"charger"
+scale_factor = 4.0
+tint = Color(0.7019608, 0.6039216, 0.78039217, 1)

@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_6cv40"]
+
+[resource]
+script = ExtResource("1_6cv40")
+id = &"sun_palm"
+display_name = "烈阳掌"
+description = "真气爆发，震退四周邪祟。"
+accent = Color(1, 0.6156863, 0.3372549, 1)
+values = Array[Dictionary]([{
+"cooldown": 4.0,
+"damage": 18.0,
+"knockback": 130.0,
+"radius": 92.0,
+"upgrade": "释放烈阳冲击"
+}, {
+"cooldown": 3.8,
+"damage": 25.0,
+"knockback": 150.0,
+"radius": 108.0,
+"upgrade": "冲击范围提升"
+}, {
+"cooldown": 3.55,
+"damage": 34.0,
+"knockback": 175.0,
+"radius": 124.0,
+"upgrade": "击退更强"
+}, {
+"cooldown": 3.25,
+"damage": 45.0,
+"knockback": 200.0,
+"radius": 142.0,
+"upgrade": "掌力大幅提升"
+}, {
+"cooldown": 2.9,
+"damage": 58.0,
+"double": true,
+"knockback": 230.0,
+"radius": 158.0,
+"upgrade": "化境：双重掌劲"
+}])

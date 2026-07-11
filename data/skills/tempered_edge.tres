@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_k8e7h"]
+
+[resource]
+script = ExtResource("1_k8e7h")
+id = &"tempered_edge"
+display_name = "淬锋心法"
+description = "磨砺黑剑，提升全局伤害与出招速度。"
+skill_type = 1
+accent = Color(1, 0.54509807, 0.54509807, 1)
+values = Array[Dictionary]([{
+"cdr": 0.04,
+"damage": 0.08,
+"upgrade": "伤害 +8%，冷却 -4%"
+}, {
+"cdr": 0.08,
+"damage": 0.16,
+"upgrade": "伤害累计 +16%"
+}, {
+"cdr": 0.12,
+"damage": 0.24,
+"upgrade": "伤害累计 +24%"
+}, {
+"cdr": 0.16,
+"damage": 0.32,
+"upgrade": "伤害累计 +32%"
+}, {
+"cdr": 0.2,
+"damage": 0.4,
+"upgrade": "化境：锋芒无匹"
+}])

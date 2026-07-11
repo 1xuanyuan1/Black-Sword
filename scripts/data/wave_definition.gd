@@ -1,13 +1,14 @@
 class_name WaveDefinition
 extends Resource
 
-var title: String
-var start_time: float
-var end_time: float
-var spawn_interval: float
-var enemy_weights: Dictionary
-var enemy_cap: int
-var elite_chance: float
+@export var index: int
+@export var title: String
+@export var start_time: float
+@export var end_time: float
+@export var spawn_interval: float
+@export var enemy_weights: Dictionary
+@export var enemy_cap: int
+@export var elite_chance: float
 
 
 static func create(data: Dictionary) -> WaveDefinition:

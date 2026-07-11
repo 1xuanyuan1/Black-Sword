@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/corpse.tscn" id="1_xf3i5"]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="2_7l5fv"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/corpse.png" id="3_o8mmd"]
+
+[resource]
+script = ExtResource("2_7l5fv")
+id = &"corpse"
+display_name = "尸傀"
+max_health = 34.0
+speed = 78.0
+damage = 8.0
+xp_value = 1
+attack_range = 34.0
+attack_cooldown = 1.3
+texture = ExtResource("3_o8mmd")
+actor_scene = ExtResource("1_xf3i5")
+visual_kind = &"character"
+behavior = &"melee"
+scale_factor = 3.2
+tint = Color(0.7647059, 0.8352941, 0.7607843, 1)

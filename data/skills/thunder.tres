@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_sp1g2"]
+
+[resource]
+script = ExtResource("1_sp1g2")
+id = &"thunder"
+display_name = "落雷符"
+description = "雷霆在敌群间连续跳跃。"
+accent = Color(1, 0.9019608, 0.42745098, 1)
+values = Array[Dictionary]([{
+"chains": 3,
+"cooldown": 3.2,
+"damage": 24.0,
+"upgrade": "雷击三名敌人"
+}, {
+"chains": 4,
+"cooldown": 3.0,
+"damage": 31.0,
+"upgrade": "连锁目标 +1"
+}, {
+"chains": 5,
+"cooldown": 2.75,
+"damage": 40.0,
+"upgrade": "雷霆威力提升"
+}, {
+"chains": 6,
+"cooldown": 2.5,
+"damage": 52.0,
+"upgrade": "连锁目标 +1"
+}, {
+"chains": 7,
+"cooldown": 2.25,
+"damage": 66.0,
+"starts": 2,
+"upgrade": "化境：双雷齐落"
+}])

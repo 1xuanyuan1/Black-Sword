@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1_75oqo"]
+
+[resource]
+script = ExtResource("1_75oqo")
+index = 3
+title = "第三夜·鬼灯"
+start_time = 180.0
+end_time = 270.0
+spawn_interval = 0.34
+enemy_weights = {
+&"corpse": 0.42,
+&"hound": 0.28,
+&"lantern": 0.3
+}
+enemy_cap = 115
+elite_chance = 0.08

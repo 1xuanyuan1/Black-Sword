@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_swidi"]
+
+[resource]
+script = ExtResource("1_swidi")
+id = &"sword_rain"
+display_name = "万剑归宗"
+description = "剑雨锁定敌阵，自天而降。"
+accent = Color(0.84313726, 0.78039217, 1, 1)
+values = Array[Dictionary]([{
+"cooldown": 5.0,
+"count": 5,
+"damage": 18.0,
+"radius": 105.0,
+"upgrade": "降下五道剑光"
+}, {
+"cooldown": 4.7,
+"count": 7,
+"damage": 24.0,
+"radius": 115.0,
+"upgrade": "剑光数量 +2"
+}, {
+"cooldown": 4.35,
+"count": 9,
+"damage": 31.0,
+"radius": 125.0,
+"upgrade": "剑光数量 +2"
+}, {
+"cooldown": 4.0,
+"count": 12,
+"damage": 41.0,
+"radius": 138.0,
+"upgrade": "剑雨覆盖增强"
+}, {
+"cooldown": 3.6,
+"count": 15,
+"damage": 54.0,
+"giant": true,
+"radius": 152.0,
+"upgrade": "化境：中心巨剑"
+}])

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_b287o"]
+
+[resource]
+script = ExtResource("1_b287o")
+id = &"light_step"
+display_name = "轻身诀"
+description = "身法愈轻，行动与拾取范围愈广。"
+skill_type = 1
+accent = Color(0.5254902, 0.9529412, 0.7411765, 1)
+values = Array[Dictionary]([{
+"pickup": 0.12,
+"speed": 0.06,
+"upgrade": "移速 +6%，拾取 +12%"
+}, {
+"pickup": 0.24,
+"speed": 0.12,
+"upgrade": "移速累计 +12%"
+}, {
+"pickup": 0.36,
+"speed": 0.18,
+"upgrade": "移速累计 +18%"
+}, {
+"pickup": 0.48,
+"speed": 0.24,
+"upgrade": "移速累计 +24%"
+}, {
+"pickup": 0.6,
+"speed": 0.3,
+"upgrade": "化境：身轻如燕"
+}])

@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_pujru"]
+
+[resource]
+script = ExtResource("1_pujru")
+id = &"frost"
+display_name = "寒霜剑阵"
+description = "凝霜成阵，伤敌并减缓行动。"
+accent = Color(0.5137255, 0.8117647, 1, 1)
+values = Array[Dictionary]([{
+"cooldown": 4.2,
+"damage": 15.0,
+"duration": 2.0,
+"radius": 100.0,
+"slow": 0.65,
+"upgrade": "布下一座霜阵"
+}, {
+"cooldown": 4.0,
+"damage": 21.0,
+"duration": 2.2,
+"radius": 116.0,
+"slow": 0.6,
+"upgrade": "范围和减速提升"
+}, {
+"cooldown": 3.75,
+"damage": 29.0,
+"duration": 2.4,
+"radius": 132.0,
+"slow": 0.55,
+"upgrade": "霜阵持续更久"
+}, {
+"cooldown": 3.45,
+"damage": 39.0,
+"duration": 2.7,
+"radius": 148.0,
+"slow": 0.5,
+"upgrade": "寒气威力提升"
+}, {
+"cooldown": 3.1,
+"damage": 52.0,
+"duration": 3.0,
+"freeze": true,
+"radius": 164.0,
+"slow": 0.42,
+"upgrade": "化境：冻结群敌"
+}])

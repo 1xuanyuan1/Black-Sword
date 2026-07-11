@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_mep6v"]
+
+[resource]
+script = ExtResource("1_mep6v")
+id = &"sword_wave"
+display_name = "剑气纵横"
+description = "向敌群打出贯穿剑气。"
+accent = Color(0.72156864, 0.96862745, 1, 1)
+values = Array[Dictionary]([{
+"bounces": 0,
+"cooldown": 2.4,
+"damage": 22.0,
+"pierce": 4,
+"speed": 430.0,
+"upgrade": "贯穿四名敌人",
+"width": 22.0
+}, {
+"bounces": 0,
+"cooldown": 2.25,
+"damage": 29.0,
+"pierce": 5,
+"speed": 450.0,
+"upgrade": "剑气更宽",
+"width": 26.0
+}, {
+"bounces": 1,
+"cooldown": 2.05,
+"damage": 37.0,
+"pierce": 7,
+"speed": 470.0,
+"upgrade": "剑气可反弹一次",
+"width": 30.0
+}, {
+"bounces": 1,
+"cooldown": 1.85,
+"damage": 48.0,
+"pierce": 9,
+"speed": 500.0,
+"upgrade": "剑气威力大增",
+"width": 34.0
+}, {
+"bounces": 2,
+"cooldown": 1.65,
+"cross": true,
+"damage": 62.0,
+"pierce": 12,
+"speed": 530.0,
+"upgrade": "化境：交叉剑气，反弹两次",
+"width": 38.0
+}])

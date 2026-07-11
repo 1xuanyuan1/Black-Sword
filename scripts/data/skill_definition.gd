@@ -3,13 +3,13 @@ extends Resource
 
 enum SkillType { ACTIVE, PASSIVE }
 
-var id: StringName
-var display_name: String
-var description: String
-var skill_type: SkillType = SkillType.ACTIVE
-var max_level: int = 5
-var accent: Color = Color.WHITE
-var values: Array[Dictionary] = []
+@export var id: StringName
+@export var display_name: String
+@export_multiline var description: String
+@export var skill_type: SkillType = SkillType.ACTIVE
+@export var max_level: int = 5
+@export var accent: Color = Color.WHITE
+@export var values: Array[Dictionary] = []
 
 
 static func create(

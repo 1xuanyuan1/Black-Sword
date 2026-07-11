@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/hound.tscn" id="1_echfw"]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="2_lpc3y"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/shadow_hound.png" id="3_tc7lo"]
+
+[resource]
+script = ExtResource("2_lpc3y")
+id = &"hound"
+display_name = "影犬"
+max_health = 24.0
+speed = 126.0
+damage = 7.0
+xp_value = 2
+attack_range = 30.0
+attack_cooldown = 1.0
+texture = ExtResource("3_tc7lo")
+actor_scene = ExtResource("1_echfw")
+visual_kind = &"monster"
+behavior = &"melee"
+scale_factor = 3.0
+tint = Color(0.61960787, 0.69411767, 0.7529412, 1)

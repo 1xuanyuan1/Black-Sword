@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="CharacterDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="1_tae13"]
+[ext_resource type="Texture2D" path="res://assets/actors/hero/hero_actual.png" id="2_limvt"]
+[ext_resource type="Script" path="res://scripts/data/character_definition.gd" id="3_cbnmi"]
+
+[resource]
+script = ExtResource("3_cbnmi")
+id = &"black_sword"
+display_name = "黑剑客"
+description = "近身剑客，以宽阔剑弧斩开群敌。"
+actor_scene = ExtResource("1_tae13")
+portrait = ExtResource("2_limvt")
+initial_skill_id = &"black_slash"
+visual_kind = &"hero_actual"
+visual_scale = 0.72

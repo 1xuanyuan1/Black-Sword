@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WaveDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/wave_definition.gd" id="1_m4as8"]
+
+[resource]
+script = ExtResource("1_m4as8")
+index = 1
+title = "第一夜·尸行"
+end_time = 90.0
+spawn_interval = 0.72
+enemy_weights = {
+&"corpse": 1.0
+}
+enemy_cap = 55

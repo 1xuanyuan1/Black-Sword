@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_h44yj"]
+
+[resource]
+script = ExtResource("1_h44yj")
+id = &"flying_sword"
+display_name = "飞剑诀"
+description = "御剑追敌，飞剑穿透后折返。"
+accent = Color(0.49019608, 0.8627451, 1, 1)
+values = Array[Dictionary]([{
+"bounces": 0,
+"cooldown": 2.0,
+"count": 1,
+"damage": 16.0,
+"pierce": 1,
+"speed": 380.0,
+"upgrade": "御使一柄飞剑"
+}, {
+"bounces": 1,
+"cooldown": 1.9,
+"count": 2,
+"damage": 20.0,
+"pierce": 1,
+"speed": 410.0,
+"upgrade": "飞剑 +1，碰到树干可反弹"
+}, {
+"bounces": 1,
+"cooldown": 1.72,
+"count": 2,
+"damage": 26.0,
+"pierce": 2,
+"speed": 440.0,
+"upgrade": "飞剑穿透 +1"
+}, {
+"bounces": 2,
+"cooldown": 1.55,
+"count": 3,
+"damage": 33.0,
+"pierce": 2,
+"speed": 470.0,
+"upgrade": "飞剑 +1，反弹 +1"
+}, {
+"bounces": 3,
+"cooldown": 1.38,
+"count": 3,
+"damage": 42.0,
+"pierce": 3,
+"returning": true,
+"speed": 500.0,
+"upgrade": "化境：三次反弹后折返"
+}])

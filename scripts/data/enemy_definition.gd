@@ -1,19 +1,20 @@
 class_name EnemyDefinition
 extends Resource
 
-var id: StringName
-var display_name: String
-var max_health: float
-var speed: float
-var damage: float
-var xp_value: int
-var attack_range: float
-var attack_cooldown: float
-var texture: Texture2D
-var visual_kind: StringName
-var behavior: StringName
-var scale_factor: float = 3.5
-var tint: Color = Color.WHITE
+@export var id: StringName
+@export var display_name: String
+@export var max_health: float
+@export var speed: float
+@export var damage: float
+@export var xp_value: int
+@export var attack_range: float
+@export var attack_cooldown: float
+@export var texture: Texture2D
+@export var actor_scene: PackedScene
+@export var visual_kind: StringName
+@export var behavior: StringName
+@export var scale_factor: float = 3.5
+@export var tint: Color = Color.WHITE
 
 
 static func create(data: Dictionary) -> EnemyDefinition:

@@ -1,0 +1,63 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_8sc5h"]
+
+[resource]
+script = ExtResource("1_8sc5h")
+id = &"rasengan"
+display_name = "螺旋丸"
+description = "将高速旋转的查克拉凝聚成球，自动追击最近的敌人。"
+accent = Color(0.39607844, 0.8117647, 1, 1)
+values = Array[Dictionary]([{
+"cooldown": 1.45,
+"count": 1,
+"damage": 25.0,
+"pierce": 0,
+"radius": 18.0,
+"speed": 290.0,
+"upgrade": "凝聚一枚单体螺旋丸"
+}, {
+"aoe_damage": 0.65,
+"aoe_radius": 78.0,
+"cooldown": 1.32,
+"count": 1,
+"damage": 33.0,
+"pierce": 0,
+"radius": 20.0,
+"speed": 310.0,
+"upgrade": "群攻：命中后爆发螺旋冲击"
+}, {
+"aoe_damage": 0.72,
+"aoe_radius": 105.0,
+"cooldown": 1.2,
+"count": 1,
+"damage": 43.0,
+"pierce": 0,
+"radius": 27.0,
+"speed": 335.0,
+"upgrade": "大螺旋丸：本体与爆炸范围变大"
+}, {
+"aoe_damage": 0.78,
+"aoe_radius": 116.0,
+"cooldown": 1.08,
+"count": 1,
+"damage": 55.0,
+"pierce": 0,
+"radius": 29.0,
+"speed": 360.0,
+"split_count": 3,
+"split_damage": 0.55,
+"upgrade": "命中后分裂三枚小螺旋丸"
+}, {
+"aoe_damage": 0.85,
+"aoe_radius": 150.0,
+"cooldown": 0.95,
+"count": 1,
+"damage": 72.0,
+"pierce": 0,
+"radius": 38.0,
+"speed": 390.0,
+"split_count": 4,
+"split_damage": 0.65,
+"upgrade": "化境：大玉螺旋丸，爆炸后四重分裂"
+}])

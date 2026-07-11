@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/enemies/lantern.tscn" id="1_sdv4i"]
+[ext_resource type="Script" path="res://scripts/data/enemy_definition.gd" id="2_okr57"]
+[ext_resource type="Texture2D" path="res://assets/actors/enemies/lantern.png" id="3_vuc4d"]
+
+[resource]
+script = ExtResource("2_okr57")
+id = &"lantern"
+display_name = "灯笼鬼"
+max_health = 42.0
+speed = 62.0
+damage = 9.0
+xp_value = 3
+attack_range = 230.0
+attack_cooldown = 2.0
+texture = ExtResource("3_vuc4d")
+actor_scene = ExtResource("1_sdv4i")
+visual_kind = &"monster"
+behavior = &"ranged"
+scale_factor = 3.1
+tint = Color(1, 0.7019608, 0.654902, 1)

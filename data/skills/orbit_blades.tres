@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="SkillDefinition" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/skill_definition.gd" id="1_catkp"]
+
+[resource]
+script = ExtResource("1_catkp")
+id = &"orbit_blades"
+display_name = "回风护体"
+description = "剑风化作龙卷，绕身持续绞杀近敌。"
+accent = Color(0.49411765, 0.89411765, 0.8745098, 1)
+values = Array[Dictionary]([{
+"cooldown": 0.55,
+"count": 1,
+"damage": 8.0,
+"radius": 78.0,
+"rotation_speed": 1.8,
+"upgrade": "唤出一道护体龙卷"
+}, {
+"cooldown": 0.5,
+"count": 2,
+"damage": 11.0,
+"radius": 82.0,
+"rotation_speed": 2.2,
+"upgrade": "龙卷数量 +1，旋转加快"
+}, {
+"cooldown": 0.45,
+"count": 3,
+"damage": 15.0,
+"radius": 88.0,
+"rotation_speed": 2.6,
+"upgrade": "龙卷数量 +1，伤害提升"
+}, {
+"cooldown": 0.4,
+"count": 4,
+"damage": 20.0,
+"radius": 94.0,
+"rotation_speed": 3.0,
+"upgrade": "龙卷数量 +1，旋转加快"
+}, {
+"cooldown": 0.34,
+"count": 4,
+"damage": 27.0,
+"inner_count": 2,
+"radius": 100.0,
+"rotation_speed": 3.45,
+"upgrade": "化境：六龙卷内外双环"
+}])
