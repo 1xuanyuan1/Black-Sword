@@ -7,6 +7,7 @@ const WAVE_DEFINITION_SCRIPT := preload("res://scripts/data/wave_definition.gd")
 const ITEM_DEFINITION_SCRIPT := preload("res://scripts/data/item_definition.gd")
 const META_UPGRADE_DEFINITION_SCRIPT := preload("res://scripts/data/meta_upgrade_definition.gd")
 const EVOLUTION_RECIPE_SCRIPT := preload("res://scripts/data/evolution_recipe.gd")
+const STORY_EVENT_DEFINITION_SCRIPT := preload("res://scripts/data/story_event_definition.gd")
 
 const CHARACTER_DIRECTORY := "res://data/characters"
 const SKILL_DIRECTORY := "res://data/skills"
@@ -15,6 +16,7 @@ const WAVE_DIRECTORY := "res://data/waves"
 const ITEM_DIRECTORY := "res://data/items"
 const META_UPGRADE_DIRECTORY := "res://data/meta"
 const EVOLUTION_DIRECTORY := "res://data/evolutions"
+const STORY_DIRECTORY := "res://data/story"
 
 var _characters: Dictionary = {}
 var _skills: Dictionary = {}
@@ -23,6 +25,7 @@ var _waves: Array[WaveDefinition] = []
 var _items: Dictionary = {}
 var _meta_upgrades: Dictionary = {}
 var _evolutions: Dictionary = {}
+var _stories: Dictionary = {}
 var _load_errors := PackedStringArray()
 
 
@@ -40,6 +43,7 @@ func reload_content() -> void:
 	_items.clear()
 	_meta_upgrades.clear()
 	_evolutions.clear()
+	_stories.clear()
 	_load_errors.clear()
 	_load_indexed_resources(CHARACTER_DIRECTORY, CHARACTER_DEFINITION_SCRIPT, _characters)
 	_load_indexed_resources(SKILL_DIRECTORY, SKILL_DEFINITION_SCRIPT, _skills)
@@ -48,6 +52,7 @@ func reload_content() -> void:
 	_load_indexed_resources(ITEM_DIRECTORY, ITEM_DEFINITION_SCRIPT, _items)
 	_load_indexed_resources(META_UPGRADE_DIRECTORY, META_UPGRADE_DEFINITION_SCRIPT, _meta_upgrades)
 	_load_indexed_resources(EVOLUTION_DIRECTORY, EVOLUTION_RECIPE_SCRIPT, _evolutions)
+	_load_indexed_resources(STORY_DIRECTORY, STORY_EVENT_DEFINITION_SCRIPT, _stories)
 	_load_errors.append_array(_validate_references())
 
 
@@ -90,6 +95,10 @@ func evolution_for_active(id: StringName) -> EvolutionRecipe:
 	return null
 
 
+func story(id: StringName) -> StoryEventDefinition:
+	return _stories.get(id) as StoryEventDefinition
+
+
 func all_characters() -> Dictionary:
 	return _characters.duplicate()
 
@@ -118,6 +127,10 @@ func all_evolutions() -> Dictionary:
 	return _evolutions.duplicate()
 
 
+func all_stories() -> Dictionary:
+	return _stories.duplicate()
+
+
 func validate_all() -> PackedStringArray:
 	return _load_errors.duplicate()
 
@@ -131,6 +144,7 @@ func content_counts() -> Dictionary:
 		"items": _items.size(),
 		"meta_upgrades": _meta_upgrades.size(),
 		"evolutions": _evolutions.size(),
+		"stories": _stories.size(),
 	}
 
 
@@ -290,4 +304,8 @@ func _validate_references() -> PackedStringArray:
 			errors.append("局内道具 %s 的掉落权重无效" % item_definition.id)
 		if not ItemEffectRegistry.new().supports(item_definition.effect_id):
 			errors.append("局内道具 %s 使用了未注册效果：%s" % [item_definition.id, item_definition.effect_id])
+	for value in _stories.values():
+		var story_definition := value as StoryEventDefinition
+		if story_definition.title.is_empty() or story_definition.body.is_empty():
+			errors.append("故事事件 %s 缺少标题或正文" % story_definition.id)
 	return errors

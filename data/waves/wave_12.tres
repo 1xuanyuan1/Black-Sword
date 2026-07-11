@@ -13,3 +13,4 @@ kind = 2
 target_duration = 75.0
 rest_duration = 0.0
 boss_id = &"ghost_swordsman"
+entry_text = "鬼面之后，是仇人，是师父，也是守了十六年的最后一人。"

@@ -12,3 +12,4 @@ enemy_cap = 150
 elite_chance = 0.24
 target_duration = 50.0
 environment_event_ids = Array[StringName]([&"seal_columns"])
+entry_text = "井下传来呼吸。封印只剩最后一道裂缝。"

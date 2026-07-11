@@ -13,3 +13,4 @@ elite_chance = 0.06
 target_duration = 50.0
 unlock_zone_id = &"sutra_library"
 environment_event_ids = Array[StringName]([&"curse_lanterns"])
+entry_text = "经阁灯火尽红。莫让它们照见你的影子。"

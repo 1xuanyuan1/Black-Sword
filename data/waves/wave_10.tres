@@ -12,3 +12,4 @@ enemy_cap = 135
 elite_chance = 0.18
 target_duration = 50.0
 environment_event_ids = Array[StringName]([&"moving_curse"])
+entry_text = "今夜死于汉水、栈道与荒野的亡魂同时叩门。"

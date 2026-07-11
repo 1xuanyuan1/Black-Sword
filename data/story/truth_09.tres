@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"truth_09"
+title = "第九响·守门人"
+body = "玄灯：鬼面纳万鬼，佩面者不得离井百步。\n沈砚：所以他守在这里……\n宁霜华：不是等你复仇。是等你来接过黑剑的另一半真相。"

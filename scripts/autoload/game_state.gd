@@ -8,6 +8,7 @@ signal meta_upgrades_changed(levels: Dictionary)
 signal run_result_submitted(result: RunResult)
 signal character_unlock_available(id: StringName)
 signal character_unlocked(id: StringName)
+signal story_flags_changed(flags: Array[StringName])
 
 var current_profile: ProfileData
 var _save_manager_override: Node
@@ -44,6 +45,25 @@ func save_current(reason: StringName = &"manual") -> Error:
 func clear_current_profile() -> void:
 	current_profile = null
 	profile_cleared.emit()
+
+
+func has_story_flag(id: StringName) -> bool:
+	return current_profile != null and id in current_profile.story_flags
+
+
+func mark_story_flag(id: StringName) -> Error:
+	if current_profile == null or id.is_empty():
+		return ERR_DOES_NOT_EXIST
+	if id in current_profile.story_flags:
+		return OK
+	var next := _clone_current_profile()
+	next.story_flags.append(id)
+	var error: Error = _manager().call("save_profile", next, &"story_progress")
+	if error != OK:
+		return error
+	current_profile = next
+	story_flags_changed.emit(current_profile.story_flags.duplicate())
+	return OK
 
 
 func has_current_profile() -> bool:

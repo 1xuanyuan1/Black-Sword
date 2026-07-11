@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"truth_06"
+title = "第六响·前因"
+body = "宁霜华：顾沉舟若真想杀你，十六年前便不会把黑剑送出寺外。\n沈砚：我亲眼见他戴着鬼面，站在师门尸首之间。\n玄灯：眼见是实。前因未必。"

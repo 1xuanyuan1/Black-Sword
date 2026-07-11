@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"truth_03"
+title = "第三响·残响"
+body = "玄灯：第一只宝匣，不是奖赏。它装着你曾经抵达这里的证明。\n沈砚：我从未来过。\n宁霜华：你每一次都这么说。"

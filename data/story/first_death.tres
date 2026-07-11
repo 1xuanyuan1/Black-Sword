@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"first_death"
+title = "灯火未熄"
+body = "剑落地时，沈砚听见了第二种声音。\n不是鬼哭，也不是钟鸣，而是火焰把这一夜烧成灰烬的轻响。\n\n他再次睁眼，仍站在荒寺阶前。\n守灯女子抬起头，眼中没有惊讶。\n\n“这一次，你带回了夜烬。”"
+pause_battle = false

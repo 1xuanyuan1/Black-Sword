@@ -17,6 +17,7 @@ enum WaveKind { NORMAL, MINIBOSS, FINAL_BOSS }
 @export var boss_id: StringName
 @export var environment_event_ids: Array[StringName] = []
 @export var unlock_zone_id: StringName
+@export_multiline var entry_text: String
 
 
 static func create(data: Dictionary) -> WaveDefinition:

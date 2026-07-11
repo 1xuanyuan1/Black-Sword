@@ -14,6 +14,7 @@ signal sfx_requested(id: StringName)
 signal music_requested(id: StringName)
 signal temporary_item_effects_changed(effects: Dictionary)
 signal evolution_requested(chest_id: StringName, options: Array[EvolutionRecipe])
+signal story_event_requested(id: StringName)
 
 const BOSS_SPAWN_TIME := 390.0
 const BOSS_SCENE: PackedScene = preload("res://scenes/actors/boss.tscn")
@@ -143,7 +144,7 @@ func _on_wave_started(index: int, definition: WaveDefinition) -> void:
 		item_drop_system.start_wave(index)
 	spawn_director.begin_wave(definition)
 	backdrop.on_wave_started(definition)
-	announce(definition.title, Color("d9e4ff"))
+	announce("%s\n%s" % [definition.title, definition.entry_text], Color("d9e4ff"))
 
 
 func _on_wave_completed(index: int) -> void:
@@ -152,6 +153,8 @@ func _on_wave_completed(index: int) -> void:
 	if definition != null and definition.kind == WaveDefinition.WaveKind.NORMAL:
 		item_drop_system.complete_wave(index)
 	run_controller.record_wave_completed(index)
+	if index in [3, 6, 9]:
+		story_event_requested.emit(StringName("truth_%02d" % index))
 
 
 func _on_wave_rest_started(next_index: int, _duration: float) -> void:
@@ -212,6 +215,12 @@ func spawn_miniboss(id: StringName) -> MinibossActor:
 	enemies.append(miniboss)
 	wave_director.register_boss(miniboss.get_instance_id())
 	announce("小 Boss · %s" % miniboss.display_name, Color("ffb078"))
+	var entry_lines := {
+		&"bone_corpse_king": "将军有令——死者，也须列阵！",
+		&"red_lantern_lady": "灯已点了十六年。你为何还不来迎我？",
+		&"iron_arm_monk": "住持有命。钟未十二，任何人不得近井。",
+	}
+	announce(entry_lines.get(id, miniboss.display_name), Color("ffb078"))
 	return miniboss
 
 
@@ -239,6 +248,12 @@ func _on_miniboss_defeated(actor: MinibossActor) -> void:
 	kills += 1
 	run_controller.record_miniboss_defeated()
 	evolution_system.spawn_chest(death_position)
+	var death_lines := {
+		&"bone_corpse_king": "原来……战已经打完了……",
+		&"red_lantern_lady": "天快亮了吗……我看不见。",
+		&"iron_arm_monk": "十二响……终于到了么……",
+	}
+	announce(death_lines.get(actor.boss_id, "宝匣在余烬中显形。"), Color("ffd19a"))
 	wave_director.notify_boss_defeated(instance_id)
 	miniboss = null
 
@@ -256,7 +271,7 @@ func _start_boss() -> void:
 	enemies.clear()
 	if absorbed_xp > 0:
 		collect_xp(absorbed_xp)
-	announce("鬼门震动——鬼面剑豪现身", Color("ff6b6b"))
+	announce("顾沉舟：黑剑还是把你带回来了。\n沈砚：摘下面具。", Color("ff9b8d"))
 	boss = BOSS_SCENE.instantiate() as BossActor
 	actor_layer.add_child(boss)
 	boss.global_position = Vector2(0, -390)

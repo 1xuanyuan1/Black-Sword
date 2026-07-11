@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ending_zhao_yun"
+title = "常山支线·不载之战"
+body = "赵云在黎明前走出荒寺，失踪斥候的马匹正在山道旁安静吃草，仿佛只过去了一刻。\n\n军中簿册最终只添了一句：“褒斜支路已清，无曹军伏兵。”\n\n至于百鬼、夜钟与那名执黑剑的年轻人，赵云没有写。并非不信，而是有些战事，不该再惊扰活人。"
+route_id = &"zhao_yun"
+pause_battle = false

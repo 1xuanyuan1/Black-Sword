@@ -12,3 +12,4 @@ enemy_cap = 90
 elite_chance = 0.08
 target_duration = 50.0
 environment_event_ids = Array[StringName]([&"mist_zone"])
+entry_text = "符纸借风成形，每一道都写着未归人的姓名。"

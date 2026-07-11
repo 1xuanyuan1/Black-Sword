@@ -84,12 +84,12 @@ func _physics_process(delta: float) -> void:
 	if target_phase >= 2 and not entered_phase_two:
 		entered_phase_two = true
 		phase = 2
-		_begin_phase_transition("剑豪震怒·弹幕解禁", Color("ffb06b"))
+		_begin_phase_transition("顾沉舟：你记得我站在尸首之间。\n可曾记得，是谁从井里爬了出来？", Color("ffb06b"))
 		return
 	if target_phase >= 3 and not entered_phase_three:
 		entered_phase_three = true
 		phase = 3
-		_begin_phase_transition("鬼门大开·怨军再临", Color("ff6b81"))
+		_begin_phase_transition("顾沉舟：很好。比上一次更快。\n我记得每一次你死在这里。", Color("ff6b81"))
 		return
 	phase = target_phase
 	attack_timer -= delta

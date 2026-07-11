@@ -13,3 +13,4 @@ elite_chance = 0.14
 kind = 1
 target_duration = 65.0
 boss_id = &"iron_arm_monk"
+entry_text = "一双铁臂守着空殿，十六年不曾放下。"

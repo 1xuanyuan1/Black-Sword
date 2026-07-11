@@ -14,3 +14,4 @@ kind = 1
 target_duration = 65.0
 boss_id = &"red_lantern_lady"
 environment_event_ids = Array[StringName]([&"moving_curse"])
+entry_text = "喜灯无主，鬼姬仍在等一场没有新郎的婚宴。"

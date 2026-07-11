@@ -12,3 +12,4 @@ enemy_cap = 105
 elite_chance = 0.12
 target_duration = 50.0
 unlock_zone_id = &"seal_hall"
+entry_text = "旧甲重新站起，生前的旗号早已无人认得。"

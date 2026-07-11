@@ -12,3 +12,4 @@ enemy_cap = 120
 elite_chance = 0.14
 target_duration = 50.0
 environment_event_ids = Array[StringName]([&"seal_pulse"])
+entry_text = "经声倒诵，封印开始把守门人也当作恶鬼。"

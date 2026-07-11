@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ending_main"
+title = "黎明之前"
+body = "鬼面碎裂，积在殿中的怨声忽然安静。\n沈砚没有把面具戴到自己脸上。他依顾沉舟最后的指引，将黑剑刺入井沿，而非井心。\n\n剑锋斩断的不是鬼门，是十六年来把守门人钉死在长夜中的旧誓。宁霜华托起守夜灯，玄灯敲下第十二响。\n\n第一线晨光越过秦岭。沈砚走出山门时，地下忽然传来一声钟响。\n\n不是玄灯。\n\n那是第十三响。"
+pause_battle = false

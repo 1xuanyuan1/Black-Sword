@@ -29,6 +29,13 @@
 - `evolution_system`：十套配方、进阶条件、原槽替换、冷却继承、永久宝匣、三选一与单局三次上限。
 - `wave_director`：十二波顺序、Boss 死亡门控、三控制器装配、两种新敌人、精英词缀与三名小 Boss。
 - `map_and_boss`：四区与结界解锁、五类环境危险预警/伤害、鬼面剑豪显式状态机与 70%/35% 阶段转换。
+- `story_ui`：三国主线与两条支线文本、十二响提示、已读存档、故事档案、八个独立 UI 场景和音频接入。
+
+故事入口使用隔离测试存档并强制展示首次序章：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-story
+```
 
 ## 编写约定
 

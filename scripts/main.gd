@@ -6,6 +6,7 @@ const BATTLE_MUSIC := preload("res://assets/audio/battle.ogg")
 const BOSS_MUSIC := preload("res://assets/audio/boss.ogg")
 const BATTLE_ARENA_SCENE: PackedScene = preload("res://scenes/gameplay/battle_arena.tscn")
 const VIRTUAL_JOYSTICK_SCENE: PackedScene = preload("res://scenes/ui/virtual_joystick.tscn")
+const STORY_OVERLAY_SCENE: PackedScene = preload("res://scenes/ui/story_overlay.tscn")
 const SFX_STREAMS := {
 	&"slash": preload("res://assets/audio/slash.wav"),
 	&"hit": preload("res://assets/audio/hit.wav"),
@@ -56,6 +57,8 @@ var current_run_result: RunResult
 var evolution_options: Array[EvolutionRecipe] = []
 var evolution_chest_id: StringName
 var evolving := false
+var story_open := false
+var pending_story_ids: Array[StringName] = []
 
 
 func _ready() -> void:
@@ -125,6 +128,8 @@ func _handle_qa_args() -> void:
 	elif "--qa-map-boss" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_map_boss")
+	elif "--qa-story" in OS.get_cmdline_user_args():
+		call_deferred("_qa_prepare_story")
 
 
 func _process(_delta: float) -> void:
@@ -255,6 +260,20 @@ func _qa_prepare_map_boss() -> void:
 		arena.backdrop.trigger_environment_event(event_id)
 	arena._start_boss()
 	arena.announce("QA 地图/Boss：四区全开，五类危险激活，鬼面剑豪入场", Color("ffd38a"))
+
+
+func _qa_prepare_story() -> void:
+	if not OS.is_debug_build():
+		return
+	SaveManager.configure_storage_root_for_tests("user://tests/manual_story")
+	var summaries: Array[SaveSlotSummary] = SaveManager.list_slots()
+	var profile: ProfileData = GameState.load_profile(1) if summaries[0].exists else GameState.create_profile(1)
+	if profile == null:
+		return
+	profile.story_flags.erase(&"prologue")
+	GameState.save_current(&"qa_story_seed")
+	selected_character_id = &"black_sword"
+	_start_game()
 
 
 func _qa_show_meta_progression() -> void:
@@ -396,6 +415,8 @@ func _clear_ui() -> void:
 	evolving = false
 	evolution_options.clear()
 	evolution_chest_id = &""
+	story_open = false
+	pending_story_ids.clear()
 	for child in ui_root.get_children():
 		child.queue_free()
 	modal_overlay = null
@@ -660,7 +681,7 @@ func _show_hub(notice: String = "") -> void:
 	background.add_child(progression)
 	var panel := PanelContainer.new()
 	panel.position = Vector2(390, 248)
-	panel.size = Vector2(500, 300)
+	panel.size = Vector2(500, 350)
 	panel.theme = game_theme
 	background.add_child(panel)
 	var actions := VBoxContainer.new()
@@ -675,6 +696,10 @@ func _show_hub(notice: String = "") -> void:
 	progression_button.name = "OpenMetaProgressionButton"
 	progression_button.pressed.connect(_show_meta_progression)
 	actions.add_child(progression_button)
+	var story_button := _button("故事档案", Vector2(360, 54))
+	story_button.name = "OpenStoryArchiveButton"
+	story_button.pressed.connect(_show_story_archive)
+	actions.add_child(story_button)
 	var switch_slot := _button("切换守夜灯", Vector2(360, 54))
 	switch_slot.name = "SwitchSaveSlotButton"
 	switch_slot.pressed.connect(_show_save_selection)
@@ -683,6 +708,50 @@ func _show_hub(notice: String = "") -> void:
 	back.name = "HubBackToTitleButton"
 	back.position = Vector2(510, 625)
 	back.pressed.connect(func() -> void: GameState.save_current(&"return_to_title"); _show_title())
+	background.add_child(back)
+
+
+func _show_story_archive() -> void:
+	if not GameState.has_current_profile():
+		return
+	game_running = false
+	hub_open = false
+	get_tree().paused = false
+	_clear_world()
+	_clear_ui()
+	var background := ColorRect.new()
+	background.name = "StoryArchiveBackground"
+	background.color = Color("080f1b")
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui_root.add_child(background)
+	var title := _label("故事档案 · 长夜残响", 40, Color("f2ead7"))
+	title.position = Vector2(0, 28)
+	title.size = Vector2(1280, 58)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	background.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(250, 105)
+	scroll.size = Vector2(780, 500)
+	background.add_child(scroll)
+	var entries := VBoxContainer.new()
+	entries.name = "StoryArchiveEntries"
+	entries.custom_minimum_size.x = 750
+	entries.add_theme_constant_override("separation", 10)
+	scroll.add_child(entries)
+	var stories := ContentDatabase.all_stories().values()
+	stories.sort_custom(func(a: StoryEventDefinition, b: StoryEventDefinition) -> bool: return a.id < b.id)
+	for value in stories:
+		var story := value as StoryEventDefinition
+		var read := GameState.has_story_flag(story.id)
+		var button := _button(("已读 · " + story.title) if read else "未解锁的残响", Vector2(730, 54))
+		button.name = "StoryEntry_" + String(story.id)
+		button.disabled = not read
+		if read:
+			button.pressed.connect(_show_story_event.bind(story.id, true))
+		entries.add_child(button)
+	var back := _button("返回守夜庭", Vector2(260, 50))
+	back.position = Vector2(510, 630)
+	back.pressed.connect(_show_hub)
 	background.add_child(back)
 
 
@@ -1113,6 +1182,8 @@ func _start_game() -> void:
 	_connect_arena()
 	_build_hud()
 	_refresh_hud_from_arena()
+	if GameState.has_current_profile():
+		call_deferred("_show_story_event", &"prologue")
 
 
 func _refresh_hud_from_arena() -> void:
@@ -1133,6 +1204,7 @@ func _connect_arena() -> void:
 	arena.temporary_item_effects_changed.connect(_update_temporary_item_effects)
 	arena.level_up_requested.connect(_show_level_up)
 	arena.evolution_requested.connect(_show_evolution)
+	arena.story_event_requested.connect(_show_story_event)
 	arena.evolution_system.chest_spawned.connect(func(_id: StringName) -> void: _update_chest_count())
 	arena.evolution_system.evolution_applied.connect(func(_chest: StringName, _skill: StringName) -> void: _update_chest_count())
 	arena.boss_spawned.connect(_show_boss)
@@ -1536,6 +1608,41 @@ func _choose_evolution(index: int) -> void:
 	_set_touch_movement_enabled(true)
 
 
+func _show_story_event(id: StringName, force: bool = false) -> void:
+	var definition := ContentDatabase.story(id)
+	if definition == null:
+		return
+	var already_read := GameState.has_story_flag(id)
+	if definition.once_per_profile and already_read and not force:
+		return
+	if story_open or leveling or evolving or pause_open:
+		if id not in pending_story_ids:
+			pending_story_ids.append(id)
+		return
+	story_open = true
+	if definition.pause_battle and game_running:
+		_release_virtual_movement()
+		_set_touch_movement_enabled(false)
+		get_tree().paused = true
+	var overlay := STORY_OVERLAY_SCENE.instantiate() as StoryOverlay
+	overlay.theme = game_theme
+	ui_root.add_child(overlay)
+	overlay.setup(definition, already_read)
+	overlay.closed.connect(_on_story_closed.bind(definition.pause_battle))
+
+
+func _on_story_closed(id: StringName, paused_battle: bool) -> void:
+	story_open = false
+	if GameState.has_current_profile():
+		GameState.mark_story_flag(id)
+	if paused_battle and game_running and not leveling and not evolving and not pause_open:
+		get_tree().paused = false
+		_set_touch_movement_enabled(true)
+	if not pending_story_ids.is_empty():
+		var next_id: StringName = pending_story_ids.pop_front()
+		call_deferred("_show_story_event", next_id)
+
+
 func _update_chest_count() -> void:
 	if is_instance_valid(chest_label) and is_instance_valid(arena):
 		chest_label.text = "悟道宝匣 %d" % arena.evolution_system.chests.size()
@@ -1634,6 +1741,13 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 		current_run_result.final_boss_kill = victory
 		current_run_result.kills = kills
 		current_run_result.player_level = level
+	var result_story_id: StringName
+	if victory:
+		result_story_id = &"ending_zhao_yun" if selected_character_id == &"zhao_yun" else &"ending_minato" if selected_character_id == &"minato" else &"ending_main"
+	elif not GameState.has_story_flag(&"first_death"):
+		result_story_id = &"first_death"
+	if not result_story_id.is_empty() and result_story_id not in current_run_result.story_events:
+		current_run_result.story_events.append(result_story_id)
 	var submit_error := OK
 	if GameState.has_current_profile():
 		submit_error = GameState.submit_run_result(current_run_result)
@@ -1641,17 +1755,17 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	ui_root.add_child(modal_overlay)
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -280
-	panel.offset_top = -260
-	panel.offset_right = 280
-	panel.offset_bottom = 260
+	panel.offset_left = -430
+	panel.offset_top = -345
+	panel.offset_right = 430
+	panel.offset_bottom = 345
 	panel.theme = game_theme
 	modal_overlay.add_child(panel)
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_theme_constant_override("separation", 16)
 	panel.add_child(box)
-	var title_text := "破晓·荒寺复寂" if victory else "剑折·百鬼未休"
+	var title_text := "长夜已尽" if victory else "灯火未熄"
 	var title_color := Color("ffe2a6") if victory else Color("ff8e9b")
 	var title := _label(title_text, 40, title_color)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1668,6 +1782,20 @@ func _show_result(victory: bool, elapsed: float, level: int, kills: int) -> void
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stats.add_theme_constant_override("line_spacing", 10)
 	box.add_child(stats)
+	if not result_story_id.is_empty():
+		var story := ContentDatabase.story(result_story_id)
+		if story != null:
+			var story_text := RichTextLabel.new()
+			story_text.name = "ResultStoryText"
+			story_text.theme = game_theme
+			story_text.bbcode_enabled = false
+			story_text.text = "%s\n%s" % [story.title, story.body]
+			story_text.custom_minimum_size = Vector2(760, 205)
+			story_text.fit_content = false
+			story_text.scroll_active = true
+			story_text.add_theme_font_size_override("normal_font_size", 17)
+			story_text.add_theme_color_override("default_color", Color("bdc9da"))
+			box.add_child(story_text)
 	var retry := _button("再入荒寺", Vector2(320, 58))
 	retry.pressed.connect(func() -> void: get_tree().paused = false; _start_game())
 	box.add_child(retry)

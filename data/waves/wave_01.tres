@@ -10,3 +10,4 @@ enemy_weights = {&"corpse": 1.0}
 enemy_cap = 45
 target_duration = 50.0
 unlock_zone_id = &"mountain_gate"
+entry_text = "战死者忘了归路，只记得向活人伸手。"

@@ -13,3 +13,4 @@ elite_chance = 0.03
 kind = 1
 target_duration = 65.0
 boss_id = &"bone_corpse_king"
+entry_text = "尸骨俯首之处，腐骨之王自土中起身。"

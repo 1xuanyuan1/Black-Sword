@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"prologue"
+title = "序章·无月之夜"
+body = "建安二十四年，汉中兵戈方歇。\n活人沿栈道归乡，死人却循着一声无人听见的钟，走进秦岭深处。\n\n沈砚追随黑剑的震鸣来到荒寺。门额上“照夜”二字只剩半边，阶前却有尚未冷透的灯。\n\n女子守在灯后，没有问他从何处来。\n\n“你又来了。”她说。\n\n远处，第一声钟响。\n\n撑过十二响。别让黑剑落入井中。"

@@ -12,3 +12,4 @@ enemy_cap = 60
 elite_chance = 0.04
 target_duration = 50.0
 unlock_zone_id = &"withered_forest"
+entry_text = "林中没有犬吠，只有影子先一步扑来。"

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="StoryEventDefinition" format=3]
+[ext_resource type="Script" path="res://scripts/data/story_event_definition.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ending_minato"
+title = "异界支线·坐标"
+body = "第十二响前，水门终于在守夜灯旁重新标定术式坐标。\n\n他把一枚苦无留给宁霜华：“如果裂隙再次打开，它会先告诉我。”\n\n金色身影消失后，苦无上的术式仍亮了一瞬。长夜没有记住他的来处，却记住了有人曾从另一个时代伸手扶住封印。"
+route_id = &"minato"
+pause_battle = false
