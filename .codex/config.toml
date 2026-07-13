@@ -1,0 +1,3 @@
+[agents.godot4_developer]
+description = "Godot 4.7 专业开发子 Agent，负责实现、调试、测试和优化 2D 游戏系统，以及 TileSet/TileMapLayer 地图、场景、碰撞分层、Resource、UI、动画、素材导入、Shader、粒子和导出问题。适用于明确的 Godot 工程任务；不用于纯剧情写作或脱离实现的概念美术构思。"
+config_file = "agents/godot4-developer.toml"
