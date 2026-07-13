@@ -56,6 +56,7 @@ func setup(new_arena: Node) -> void:
 	set_collision_layer_value(3, true)
 	collision_mask = 0
 	set_collision_mask_value(2, true)
+	set_collision_mask_value(4, true)
 	_set_animation(&"idle")
 	set_state(BossState.ENTER)
 	z_index = 8

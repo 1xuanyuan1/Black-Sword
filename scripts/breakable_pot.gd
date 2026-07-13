@@ -23,7 +23,7 @@ func break_open() -> void:
 	if broken:
 		return
 	broken = true
-	monitoring = false
+	set_deferred("monitoring", false)
 	if is_instance_valid(drop_system):
 		drop_system.pot_broken(global_position)
 	queue_free()

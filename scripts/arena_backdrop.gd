@@ -37,7 +37,7 @@ func _ready() -> void:
 func setup(arena_bounds: Rect2, new_arena: Arena = null) -> void:
 	bounds = arena_bounds
 	arena = new_arena
-	z_index = -50
+	z_index = 0
 	for hazard in hazards.values():
 		(hazard as HazardArea).setup(arena)
 	unlock_zone(&"mountain_gate")
@@ -90,17 +90,14 @@ func world_collision_count(group_name: StringName) -> int:
 
 
 func is_point_clear(world_position: Vector2, margin: float = 0.0) -> bool:
-	for child_node in world_collision_layer.get_children():
-		var tree_body: StaticBody2D = child_node as StaticBody2D
-		if tree_body == null or not tree_body.is_in_group("world_trees"):
-			continue
-		var trunk_collision: CollisionShape2D = tree_body.get_node_or_null("TrunkCollision") as CollisionShape2D
-		if trunk_collision == null:
-			continue
-		var trunk_shape: CircleShape2D = trunk_collision.shape as CircleShape2D
-		if trunk_shape == null:
-			continue
-		var trunk_center: Vector2 = tree_body.global_position + trunk_collision.position
-		if world_position.distance_to(trunk_center) <= trunk_shape.radius + margin:
-			return false
-	return true
+	if not is_inside_tree() or get_world_2d() == null:
+		return true
+	var probe := CircleShape2D.new()
+	probe.radius = maxf(margin, 1.0)
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = probe
+	query.transform = Transform2D(0.0, world_position)
+	query.collision_mask = 2 | 8
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	return get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty()

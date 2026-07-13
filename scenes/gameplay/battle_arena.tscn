@@ -12,10 +12,12 @@
 
 [node name="BattleArena" type="Node2D"]
 editor_description = "完整战斗场景：组装地图、玩家、玩法系统及所有运行时对象层。"
+y_sort_enabled = true
 script = ExtResource("1_arena")
 
 [node name="Environment" type="Node2D" parent="."]
 editor_description = "地图、地形碰撞和氛围效果的容器。"
+y_sort_enabled = true
 
 [node name="AbandonedTempleMap" parent="Environment" instance=ExtResource("2_map")]
 

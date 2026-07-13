@@ -147,5 +147,11 @@ func _random_position_around_player() -> Vector2:
 
 
 func _cleanup_runtime_lists() -> void:
-	active_pickups = active_pickups.filter(func(pickup: ItemPickup) -> bool: return is_instance_valid(pickup) and not pickup.is_queued_for_deletion())
-	active_pots = active_pots.filter(func(pot: BreakablePot) -> bool: return is_instance_valid(pot) and not pot.is_queued_for_deletion())
+	for index in range(active_pickups.size() - 1, -1, -1):
+		var pickup := active_pickups[index]
+		if not is_instance_valid(pickup) or pickup.is_queued_for_deletion():
+			active_pickups.remove_at(index)
+	for index in range(active_pots.size() - 1, -1, -1):
+		var pot := active_pots[index]
+		if not is_instance_valid(pot) or pot.is_queued_for_deletion():
+			active_pots.remove_at(index)

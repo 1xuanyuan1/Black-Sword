@@ -48,6 +48,8 @@ func setup(new_arena: Node, new_definition: EnemyDefinition, elite_value: Varian
 	set_collision_layer_value(3, true)
 	collision_mask = 0
 	set_collision_mask_value(2, true)
+	if definition.id != &"paper_wraith":
+		set_collision_mask_value(4, true)
 	var offset_angle := TAU * float(abs(get_instance_id()) % 24) / 24.0
 	approach_offset = Vector2.from_angle(offset_angle) * (22.0 + float(abs(get_instance_id()) % 4) * 7.0)
 	var elite_health_multiplier := 1.6 if elite_affix == &"blood" else 0.85 if elite_affix == &"swift" else 1.0

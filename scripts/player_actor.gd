@@ -42,6 +42,7 @@ func setup(new_arena: Node) -> void:
 	collision_layer = 1
 	collision_mask = 0
 	set_collision_mask_value(2, true)
+	set_collision_mask_value(4, true)
 	visual.setup(character_texture, character_visual_kind, character_visual_scale, Color.WHITE)
 	follow_camera.limit_left = int(arena.bounds.position.x)
 	follow_camera.limit_top = int(arena.bounds.position.y)

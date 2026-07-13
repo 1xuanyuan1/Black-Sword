@@ -51,6 +51,7 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	var paper := battle_root.spawn_enemy(&"paper_wraith", Vector2(180, 0), false)
 	var monk := battle_root.spawn_enemy(&"rogue_monk", Vector2(-180, 0), false)
 	context.check(paper != null and paper.definition.behavior == &"diver" and paper.definition.tags.has(&"flying"), "纸煞使用飞行俯冲行为")
+	context.check(paper != null and paper.get_collision_mask_value(2) and not paper.get_collision_mask_value(4), "纸煞只穿树干但仍受瓦片墙阻挡")
 	context.check(monk != null and monk.definition.behavior == &"sigil", "破戒僧使用延迟符印行为")
 	var lingering_projectile := CombatProjectile.create({"arena": battle_root, "owner": monk, "position": battle_root.player.global_position, "hostile": true, "damage": 1.0})
 	battle_root.add_projectile(lingering_projectile)

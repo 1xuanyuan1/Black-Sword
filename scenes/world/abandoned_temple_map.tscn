@@ -1,7 +1,7 @@
 [gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena_backdrop.gd" id="1_map"]
-[ext_resource type="Texture2D" path="res://assets/world/arena_background.png" id="2_background"]
+[ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_tile_world.tscn" id="2_tile_world"]
 [ext_resource type="Texture2D" path="res://assets/world/Fog.png" id="3_fog"]
 [ext_resource type="Texture2D" path="res://assets/world/Raylight.png" id="4_ray"]
 [ext_resource type="Script" path="res://scripts/map_zone.gd" id="5_zone"]
@@ -45,121 +45,116 @@ radius = 23.688
 radius = 21.168
 
 [node name="AbandonedTempleMap" type="Node2D"]
-editor_description = "夜间荒寺战斗地图预设：包含地表、树干碰撞和雾气月光。"
-z_index = -50
+editor_description = "夜间荒寺战斗地图预设：16×16 瓦片地表、分区建筑、树干碰撞和雾气月光。"
+y_sort_enabled = true
 script = ExtResource("1_map")
 
-[node name="GroundLayer" type="Node2D" parent="."]
-editor_description = "地图地表和荒寺建筑的视觉层。"
-
-[node name="ArenaBackground" type="Sprite2D" parent="GroundLayer"]
-texture_filter = 1
-z_index = -2
-texture = ExtResource("2_background")
+[node name="PixelMapRoot" parent="." instance=ExtResource("2_tile_world")]
 
 [node name="WorldCollisionLayer" type="Node2D" parent="."]
-editor_description = "只保存树干实体碰撞；庭院墙体不设置空气墙。"
+editor_description = "保存可穿透规则独立于瓦片墙的树干实体碰撞。"
 
 [node name="WestGroveTree01" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1351.84, -398.48)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree01"]
 shape = SubResource("TreeShape01")
 
 [node name="WestGroveTree02" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1065.44, -275.68)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree02"]
 shape = SubResource("TreeShape02")
 
 [node name="WestGroveTree03" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1274.24, -42.28)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree03"]
 shape = SubResource("TreeShape03")
 
 [node name="WestGroveTree04" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1015.68, 127.04)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree04"]
 shape = SubResource("TreeShape04")
 
 [node name="WestGroveTree05" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1361.28, 333.84)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree05"]
 shape = SubResource("TreeShape05")
 
 [node name="WestGroveTree06" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1104.8, 521.4)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree06"]
 shape = SubResource("TreeShape06")
 
 [node name="WestGroveTree07" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(-1304.96, 708.88)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/WestGroveTree07"]
 shape = SubResource("TreeShape07")
 
 [node name="EastGroveTree01" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1326.24, -421.72)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree01"]
 shape = SubResource("TreeShape08")
 
 [node name="EastGroveTree02" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1067.84, -221.52)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree02"]
 shape = SubResource("TreeShape09")
 
 [node name="EastGroveTree03" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1289.44, 7.68)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree03"]
 shape = SubResource("TreeShape10")
 
 [node name="EastGroveTree04" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(980.96, 188.12)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree04"]
 shape = SubResource("TreeShape11")
 
 [node name="EastGroveTree05" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1257.12, 408.64)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree05"]
 shape = SubResource("TreeShape12")
 
 [node name="EastGroveTree06" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1028.16, 605.52)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree06"]
 shape = SubResource("TreeShape13")
 
 [node name="EastGroveTree07" type="StaticBody2D" parent="WorldCollisionLayer" groups=["world_trees"]]
 position = Vector2(1333.76, 726.72)
-collision_layer = 2
+collision_layer = 8
 collision_mask = 0
 [node name="TrunkCollision" type="CollisionShape2D" parent="WorldCollisionLayer/EastGroveTree07"]
 shape = SubResource("TreeShape14")
 
 [node name="AtmosphereLayer" type="Node2D" parent="."]
 editor_description = "薄雾和月光等非碰撞环境表现。"
+z_index = -5
 
 [node name="MoonlightRays" type="Node2D" parent="AtmosphereLayer"]
 [node name="LeftMoonlightRay" type="Sprite2D" parent="AtmosphereLayer/MoonlightRays"]

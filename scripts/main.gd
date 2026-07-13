@@ -131,6 +131,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-map-boss" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_map_boss")
+	elif "--qa-map-overview" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_map_overview")
 	elif "--qa-story" in OS.get_cmdline_user_args():
 		call_deferred("_qa_prepare_story")
 
@@ -278,6 +281,24 @@ func _qa_prepare_map_boss() -> void:
 		arena.backdrop.trigger_environment_event(event_id)
 	arena._start_boss()
 	arena.announce("QA 地图/Boss：四区全开，五类危险激活，鬼面剑豪入场", Color("ffd38a"))
+
+
+func _qa_prepare_map_overview() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.3).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.spawn_timer = 9999.0
+	arena.player.invulnerability = 9999.0
+	arena.player.global_position = Vector2.ZERO
+	arena.player.follow_camera.zoom = Vector2.ONE * 0.39
+	for zone_id in [&"mountain_gate", &"withered_forest", &"sutra_library", &"seal_hall"]:
+		arena.backdrop.unlock_zone(zone_id)
+	for gate in arena.backdrop.gates.values():
+		(gate as ZoneGate).unlock()
+	ui_root.visible = false
 
 
 func _qa_prepare_story() -> void:

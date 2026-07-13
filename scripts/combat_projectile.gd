@@ -101,7 +101,7 @@ func _move_with_world_collision(motion: Vector2) -> bool:
 	if not is_inside_tree() or get_world_2d() == null:
 		global_position = destination
 		return false
-	var query := PhysicsRayQueryParameters2D.create(global_position, destination, 2)
+	var query := PhysicsRayQueryParameters2D.create(global_position, destination, 2 | 8)
 	query.collide_with_areas = false
 	query.collide_with_bodies = true
 	var hit: Dictionary = get_world_2d().direct_space_state.intersect_ray(query)

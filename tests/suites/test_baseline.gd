@@ -75,7 +75,7 @@ func _run_baseline() -> void:
 	var map_scene: PackedScene = load("res://scenes/world/abandoned_temple_map.tscn") as PackedScene
 	var map_root: Node = map_scene.instantiate()
 	_check(map_root.name == "AbandonedTempleMap", "荒寺地图拥有职责明确的根节点名称")
-	_check(map_root.get_node_or_null("GroundLayer/ArenaBackground") is Sprite2D, "荒寺地图地表层结构完整")
+	_check(map_root.get_node_or_null("PixelMapRoot/GroundBase") is TileMapLayer, "荒寺地图使用可编辑的 TileMapLayer 地表")
 	_check(map_root.get_node_or_null("WorldCollisionLayer/WestGroveTree01/TrunkCollision") is CollisionShape2D, "荒寺地图树干碰撞在预设中可直接编辑")
 	_check(map_root.get_node_or_null("AtmosphereLayer/FogBanks/FogBank01") is Sprite2D, "荒寺地图氛围层在预设中可直接编辑")
 	map_root.free()
@@ -220,9 +220,9 @@ func _run_baseline() -> void:
 	_check(arena.player.scene_file_path == "res://scenes/actors/player.tscn", "玩家由独立预设实例化")
 	_check(arena.backdrop.scene_file_path == "res://scenes/world/abandoned_temple_map.tscn", "战斗地图由独立预设实例化")
 	_check(arena.player.get_collision_mask_value(2), "玩家启用世界障碍碰撞层")
-	_check(arena.backdrop.world_collision_count(&"world_walls") == 0, "墙体空气碰撞已完全移除")
+	_check(arena.player.get_collision_mask_value(4), "玩家启用独立树干碰撞层")
 	_check(arena.backdrop.world_collision_count(&"world_trees") == 14, "十四棵树均创建独立树干碰撞")
-	_check(arena.backdrop.is_point_clear(Vector2(800.0, 0.0), 0.0), "视觉石墙区域不再阻挡角色")
+	_check(not arena.backdrop.is_point_clear(Vector2(-544.0, -512.0), 0.0), "瓦片石墙的视觉位置同步阻挡实体")
 	_check(not arena.backdrop.is_point_clear(Vector2(-1352.0, -399.0), 0.0), "树干中心会阻挡实体但树冠不扩大碰撞")
 	var bouncing_projectile := CombatProjectile.create({
 		"arena": arena, "owner": arena.player, "position": Vector2(-1430.0, -399.0),
@@ -268,7 +268,7 @@ func _run_baseline() -> void:
 	_check(is_instance_valid(enemy), "尸傀可按 EnemyDefinition 生成")
 	_check(first_night_health <= 24.0, "第一波尸傀生命值已下调，初始构筑可以快速击杀")
 	_check(is_instance_valid(enemy) and enemy.scene_file_path == "res://scenes/actors/enemies/corpse.tscn", "尸傀由对应独立预设实例化")
-	_check(is_instance_valid(enemy) and enemy.get_collision_layer_value(3) and enemy.get_collision_mask_value(2) and not enemy.get_collision_mask_value(3), "怪物穿过彼此但仍与树干碰撞")
+	_check(is_instance_valid(enemy) and enemy.get_collision_layer_value(3) and enemy.get_collision_mask_value(2) and enemy.get_collision_mask_value(4) and not enemy.get_collision_mask_value(3), "普通怪物穿过彼此但仍与墙体和树干碰撞")
 	if is_instance_valid(enemy):
 		enemy.take_damage(DamageEvent.create(999.0, arena.player, Vector2.RIGHT, 0.0))
 	await create_timer(1.2).timeout

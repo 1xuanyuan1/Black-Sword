@@ -31,6 +31,7 @@ func setup(new_arena: Arena, health_multiplier: float = 1.0) -> void:
 	set_collision_layer_value(3, true)
 	collision_mask = 0
 	set_collision_mask_value(2, true)
+	set_collision_mask_value(4, true)
 	health_changed.emit(health, max_health)
 	queue_redraw()
 

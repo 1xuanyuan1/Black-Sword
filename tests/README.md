@@ -90,3 +90,9 @@
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-map-boss
 ```
+
+全地图瓦片布局总览（隐藏 UI、自动解锁分区并缩小镜头）：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-map-overview
+```

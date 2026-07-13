@@ -10,6 +10,17 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	await tree.process_frame
 	await tree.process_frame
 	arena.spawn_timer = 9999.0
+	var pixel_map := arena.backdrop.get_node_or_null("PixelMapRoot") as Node2D
+	var ground := arena.backdrop.get_node_or_null("PixelMapRoot/GroundBase") as TileMapLayer
+	var details := arena.backdrop.get_node_or_null("PixelMapRoot/GroundDetail") as TileMapLayer
+	var walls := arena.backdrop.get_node_or_null("PixelMapRoot/Walls") as TileMapLayer
+	context.check(pixel_map != null and ground != null and details != null and walls != null, "荒寺地图按地表、细节、墙体拆分 TileMapLayer")
+	context.check(ground != null and ground.get_used_cells().size() == 48 * 27, "48×27 个逻辑格完整覆盖战斗边界")
+	context.check(walls != null and not walls.get_used_cells().is_empty(), "瓦片墙层包含可见且带物理碰撞的墙体")
+	context.check(arena.y_sort_enabled and arena.backdrop.y_sort_enabled and pixel_map != null and pixel_map.y_sort_enabled, "地图道具和角色共享 Y 排序链")
+	context.check(not arena.backdrop.is_point_clear(Vector2(-544.0, -512.0)), "瓦片墙体位置不可生成角色或掉落")
+	context.check(not arena.backdrop.is_point_clear(Vector2(-1352.0, -399.0)), "树干位置不可生成角色或掉落")
+	context.check(arena.backdrop.is_point_clear(Vector2.ZERO), "中央开放通道保持可通行")
 	context.check(arena.backdrop.zones.size() == 4, "荒寺地图显式包含山门、枯林、经阁、封印殿四区")
 	for id in [&"mountain_gate", &"withered_forest", &"sutra_library", &"seal_hall"]:
 		context.check(arena.backdrop.zones.get(id) is MapZone, "地图区域可按稳定 ID 查询：%s" % id)
@@ -20,9 +31,11 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	var library_gate := arena.backdrop.gates[&"sutra_library_gate"] as ZoneGate
 	var seal_gate := arena.backdrop.gates[&"seal_hall_gate"] as ZoneGate
 	context.check(forest_gate.locked and library_gate.locked and seal_gate.locked, "第一波三道结界均处于预期锁定状态")
+	context.check(not arena.backdrop.is_point_clear(forest_gate.global_position), "锁定结界参与出生点物理检测")
 	arena.backdrop.on_wave_started(ContentDatabase.wave(2))
 	await tree.process_frame
 	context.check(not forest_gate.locked and (forest_gate.get_node("GateCollision") as CollisionShape2D).disabled, "第二波解除枯林结界并先关闭碰撞")
+	context.check(arena.backdrop.is_point_clear(forest_gate.global_position), "结界解锁后通道物理检测同步放行")
 	context.check((arena.backdrop.zones[&"withered_forest"] as MapZone).unlocked, "第二波开放枯林区域")
 	arena.backdrop.on_wave_started(ContentDatabase.wave(4))
 	await tree.process_frame

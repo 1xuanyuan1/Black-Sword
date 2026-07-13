@@ -1,0 +1,45 @@
+[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/world/tileset_floor.png" id="1_26cw5"]
+[ext_resource type="Texture2D" path="res://assets/world/tileset_courtyard.png" id="2_xy8sv"]
+[ext_resource type="Texture2D" path="res://assets/world/tileset_detail.png" id="3_2qwi3"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_k681t"]
+texture = ExtResource("1_26cw5")
+14:16/0 = 0
+15:16/0 = 0
+16:16/0 = 0
+17:16/0 = 0
+18:16/0 = 0
+19:16/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_yncum"]
+texture = ExtResource("2_xy8sv")
+15:14/0 = 0
+16:14/0 = 0
+17:14/0 = 0
+19:14/0 = 0
+20:14/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_vv4ay"]
+texture = ExtResource("3_2qwi3")
+0:2/0 = 0
+2:2/0 = 0
+3:2/0 = 0
+4:2/0 = 0
+7:2/0 = 0
+13:0/0 = 0
+15:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_wi2pe"]
+texture = ExtResource("2_xy8sv")
+15:12/0 = 0
+15:12/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+
+[resource]
+physics_layer_0/collision_layer = 2
+physics_layer_0/collision_mask = 0
+sources/0 = SubResource("TileSetAtlasSource_k681t")
+sources/1 = SubResource("TileSetAtlasSource_yncum")
+sources/2 = SubResource("TileSetAtlasSource_vv4ay")
+sources/3 = SubResource("TileSetAtlasSource_wi2pe")
