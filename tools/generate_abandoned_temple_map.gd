@@ -3,6 +3,7 @@ extends SceneTree
 
 const TILESET_PATH := "res://assets/world/abandoned_temple_tileset.tres"
 const TILE_WORLD_PATH := "res://scenes/world/abandoned_temple_tile_world.tscn"
+const GRASS_WORLD_PATH := "res://scenes/world/abandoned_temple_grass_world.tscn"
 const MAP_ORIGIN := Vector2(-1536.0, -864.0)
 const MAP_SCALE := 4.0
 const MAP_SIZE := Vector2i(48, 27)
@@ -11,6 +12,8 @@ const FLOOR_SOURCE_ID := 0
 const COURTYARD_SOURCE_ID := 1
 const DETAIL_SOURCE_ID := 2
 const WALL_SOURCE_ID := 3
+const WALL_TERRAIN_SET := 0
+const WALL_TERRAIN := 0
 
 const FLOOR_TILES: Array[Vector2i] = [
 	Vector2i(14, 16), Vector2i(15, 16), Vector2i(16, 16),
@@ -24,9 +27,77 @@ const DETAIL_TILES: Array[Vector2i] = [
 	Vector2i(0, 2), Vector2i(2, 2), Vector2i(3, 2),
 	Vector2i(4, 2), Vector2i(7, 2), Vector2i(13, 0), Vector2i(15, 0),
 ]
-const WALL_TILE := Vector2i(15, 12)
+const WALL_TERRAIN_NEIGHBORS: Array[int] = [
+	TileSet.CELL_NEIGHBOR_TOP_SIDE,
+	TileSet.CELL_NEIGHBOR_TOP_RIGHT_CORNER,
+	TileSet.CELL_NEIGHBOR_RIGHT_SIDE,
+	TileSet.CELL_NEIGHBOR_BOTTOM_RIGHT_CORNER,
+	TileSet.CELL_NEIGHBOR_BOTTOM_SIDE,
+	TileSet.CELL_NEIGHBOR_BOTTOM_LEFT_CORNER,
+	TileSet.CELL_NEIGHBOR_LEFT_SIDE,
+	TileSet.CELL_NEIGHBOR_TOP_LEFT_CORNER,
+]
+# Ninja Adventure 暗色石墙的 47 个完整 Terrain 组合。
+# 掩码位顺序与 WALL_TERRAIN_NEIGHBORS 一致。
+const WALL_TERRAIN_MASKS := {
+	Vector2i(11, 12): 0x1c,
+	Vector2i(12, 12): 0x7c,
+	Vector2i(13, 12): 0x70,
+	Vector2i(14, 12): 0x10,
+	Vector2i(15, 12): 0x14,
+	Vector2i(16, 12): 0x74,
+	Vector2i(17, 12): 0x5c,
+	Vector2i(18, 12): 0x50,
+	Vector2i(19, 12): 0x54,
+	Vector2i(20, 12): 0xdd,
+	Vector2i(11, 13): 0x1f,
+	Vector2i(12, 13): 0xff,
+	Vector2i(13, 13): 0xf1,
+	Vector2i(14, 13): 0x11,
+	Vector2i(15, 13): 0x17,
+	Vector2i(16, 13): 0xf7,
+	Vector2i(17, 13): 0xdf,
+	Vector2i(18, 13): 0xd1,
+	Vector2i(19, 13): 0xd7,
+	Vector2i(20, 13): 0x77,
+	Vector2i(11, 14): 0x07,
+	Vector2i(12, 14): 0xc7,
+	Vector2i(13, 14): 0xc1,
+	Vector2i(14, 14): 0x01,
+	Vector2i(15, 14): 0x1d,
+	Vector2i(16, 14): 0xfd,
+	Vector2i(17, 14): 0x7f,
+	Vector2i(18, 14): 0x71,
+	Vector2i(19, 14): 0x7d,
+	Vector2i(20, 14): 0x5d,
+	Vector2i(21, 14): 0x75,
+	Vector2i(11, 15): 0x04,
+	Vector2i(12, 15): 0x44,
+	Vector2i(13, 15): 0x40,
+	Vector2i(14, 15): 0x00,
+	Vector2i(15, 15): 0x05,
+	Vector2i(16, 15): 0xc5,
+	Vector2i(17, 15): 0x47,
+	Vector2i(18, 15): 0x41,
+	Vector2i(19, 15): 0x45,
+	Vector2i(20, 15): 0x57,
+	Vector2i(21, 15): 0xd5,
+	Vector2i(15, 16): 0x15,
+	Vector2i(16, 16): 0xf5,
+	Vector2i(17, 16): 0x5f,
+	Vector2i(18, 16): 0x51,
+	Vector2i(19, 16): 0x55,
+}
 const TREE_REGION := Rect2(64.0, 96.0, 32.0, 32.0)
 const HOUSE_REGION := Rect2(192.0, 96.0, 48.0, 80.0)
+const GRASS_CLUSTER_CENTERS: Array[Vector2i] = [
+	Vector2i(3, 7), Vector2i(7, 9), Vector2i(4, 13), Vector2i(8, 16),
+	Vector2i(3, 19), Vector2i(7, 22), Vector2i(4, 24),
+]
+const GRASS_BACK_TILES: Array[Vector2i] = [
+	Vector2i(2, 2), Vector2i(2, 2), Vector2i(0, 2), Vector2i(4, 2),
+]
+const GRASS_FRONT_TILE := Vector2i(3, 2)
 
 const TREE_WORLD_POSITIONS: Array[Vector2] = [
 	Vector2(-1351.84, -398.48), Vector2(-1065.44, -275.68),
@@ -44,35 +115,58 @@ func _init() -> void:
 
 
 func _generate() -> void:
-	var tile_set := _build_tile_set()
-	var tileset_error := ResourceSaver.save(tile_set, TILESET_PATH)
-	if tileset_error != OK:
-		push_error("无法保存荒寺 TileSet：%s" % error_string(tileset_error))
-		quit(tileset_error)
-		return
+	var args := OS.get_cmdline_user_args()
+	var rebuild_tile_set := "--rebuild-tileset" in args or not ResourceLoader.exists(TILESET_PATH)
+	if rebuild_tile_set:
+		var tile_set := _build_tile_set()
+		var tileset_error := ResourceSaver.save(tile_set, TILESET_PATH)
+		if tileset_error != OK:
+			push_error("无法保存荒寺 TileSet：%s" % error_string(tileset_error))
+			quit(tileset_error)
+			return
+		print("GENERATED ", TILESET_PATH)
+	else:
+		print("PRESERVED ", TILESET_PATH, "（使用 --rebuild-tileset 可显式重建）")
 
-	var saved_tile_set := load(TILESET_PATH) as TileSet
+	var saved_tile_set := ResourceLoader.load(TILESET_PATH, "TileSet", ResourceLoader.CACHE_MODE_IGNORE) as TileSet
 	if saved_tile_set == null:
 		push_error("无法重新加载已保存的荒寺 TileSet")
 		quit(ERR_FILE_CANT_READ)
 		return
-	var tile_world := _build_tile_world(saved_tile_set)
-	var packed_scene := PackedScene.new()
-	var pack_error := packed_scene.pack(tile_world)
-	if pack_error != OK:
-		push_error("无法打包荒寺瓦片地图：%s" % error_string(pack_error))
-		quit(pack_error)
+	if "--tileset-only" in args:
+		quit(OK)
 		return
-	var scene_error := ResourceSaver.save(packed_scene, TILE_WORLD_PATH)
+	var grass_world := _build_grass_world(saved_tile_set)
+	var grass_scene_error := _save_scene(grass_world, GRASS_WORLD_PATH)
+	grass_world.free()
+	if grass_scene_error != OK:
+		quit(grass_scene_error)
+		return
+	print("GENERATED ", GRASS_WORLD_PATH)
+	if "--grass-only" in args:
+		quit(OK)
+		return
+	var tile_world := _build_tile_world(saved_tile_set)
+	var scene_error := _save_scene(tile_world, TILE_WORLD_PATH)
+	tile_world.free()
 	if scene_error != OK:
-		push_error("无法保存荒寺瓦片地图：%s" % error_string(scene_error))
 		quit(scene_error)
 		return
 
-	print("GENERATED ", TILESET_PATH)
 	print("GENERATED ", TILE_WORLD_PATH)
-	tile_world.free()
 	quit(OK)
+
+
+func _save_scene(scene_root: Node, output_path: String) -> Error:
+	var packed_scene := PackedScene.new()
+	var pack_error := packed_scene.pack(scene_root)
+	if pack_error != OK:
+		push_error("无法打包场景 %s：%s" % [output_path, error_string(pack_error)])
+		return pack_error
+	var scene_error := ResourceSaver.save(packed_scene, output_path)
+	if scene_error != OK:
+		push_error("无法保存场景 %s：%s" % [output_path, error_string(scene_error)])
+	return scene_error
 
 
 func _build_tile_set() -> TileSet:
@@ -88,16 +182,35 @@ func _build_tile_set() -> TileSet:
 	tile_set.add_source(courtyard_source, COURTYARD_SOURCE_ID)
 	var detail_source := _create_atlas_source("res://assets/world/tileset_detail.png", DETAIL_TILES)
 	tile_set.add_source(detail_source, DETAIL_SOURCE_ID)
-	var wall_source := _create_atlas_source("res://assets/world/tileset_courtyard.png", [WALL_TILE])
+	var wall_tiles: Array[Vector2i] = []
+	wall_tiles.assign(WALL_TERRAIN_MASKS.keys())
+	var wall_source := _create_atlas_source("res://assets/world/tileset_courtyard.png", wall_tiles)
 	tile_set.add_source(wall_source, WALL_SOURCE_ID)
+	_configure_wall_terrain(tile_set, wall_source)
+	return tile_set
 
-	var wall_data := wall_source.get_tile_data(WALL_TILE, 0)
-	wall_data.add_collision_polygon(0)
-	wall_data.set_collision_polygon_points(0, 0, PackedVector2Array([
+
+func _configure_wall_terrain(tile_set: TileSet, wall_source: TileSetAtlasSource) -> void:
+	tile_set.add_terrain_set(WALL_TERRAIN_SET)
+	tile_set.set_terrain_set_mode(WALL_TERRAIN_SET, TileSet.TERRAIN_MODE_MATCH_CORNERS_AND_SIDES)
+	tile_set.add_terrain(WALL_TERRAIN_SET, WALL_TERRAIN)
+	tile_set.set_terrain_name(WALL_TERRAIN_SET, WALL_TERRAIN, "荒寺石墙")
+	tile_set.set_terrain_color(WALL_TERRAIN_SET, WALL_TERRAIN, Color("75656f"))
+	var full_cell_collision := PackedVector2Array([
 		Vector2(-8.0, -8.0), Vector2(8.0, -8.0),
 		Vector2(8.0, 8.0), Vector2(-8.0, 8.0),
-	]))
-	return tile_set
+	])
+	for coord_value in WALL_TERRAIN_MASKS:
+		var coord := coord_value as Vector2i
+		var wall_data := wall_source.get_tile_data(coord, 0)
+		wall_data.set_terrain_set(WALL_TERRAIN_SET)
+		wall_data.set_terrain(WALL_TERRAIN)
+		var terrain_mask := int(WALL_TERRAIN_MASKS[coord])
+		for bit_index in range(WALL_TERRAIN_NEIGHBORS.size()):
+			if terrain_mask & (1 << bit_index):
+				wall_data.set_terrain_peering_bit(WALL_TERRAIN_NEIGHBORS[bit_index], WALL_TERRAIN)
+		wall_data.add_collision_polygon(0)
+		wall_data.set_collision_polygon_points(0, 0, full_cell_collision)
 
 
 func _create_atlas_source(texture_path: String, coords: Array[Vector2i]) -> TileSetAtlasSource:
@@ -130,6 +243,23 @@ func _build_tile_world(tile_set: TileSet) -> Node2D:
 	_paint_walls(walls)
 	_add_ground_seal(root)
 	_add_props(root)
+	_assign_scene_owner(root, root)
+	return root
+
+
+func _build_grass_world(tile_set: TileSet) -> Node2D:
+	var root := Node2D.new()
+	root.name = "TallGrassRoot"
+	root.set_script(load("res://scripts/tall_grass_map.gd"))
+	root.position = MAP_ORIGIN
+	root.scale = Vector2.ONE * MAP_SCALE
+	root.y_sort_enabled = true
+	root.editor_description = "枯林前后草层：后草位于角色下方，前草与动态草叶遮挡角色腿部。"
+	var grass_back := _create_layer("GrassBack", tile_set, 0, false)
+	root.add_child(grass_back)
+	var grass_front := _create_layer("GrassFront", tile_set, 6, false)
+	root.add_child(grass_front)
+	_paint_grass(grass_back, grass_front)
 	_assign_scene_owner(root, root)
 	return root
 
@@ -185,6 +315,31 @@ func _paint_details(layer: TileMapLayer) -> void:
 	layer.modulate = Color(0.62, 0.7, 0.68, 0.82)
 
 
+func _paint_grass(back_layer: TileMapLayer, front_layer: TileMapLayer) -> void:
+	var grass_cells: Dictionary = {}
+	for center in GRASS_CLUSTER_CENTERS:
+		for y_offset in range(-2, 3):
+			for x_offset in range(-2, 3):
+				var offset := Vector2i(x_offset, y_offset)
+				if offset.length_squared() > 6:
+					continue
+				var cell := center + offset
+				if cell.x < 1 or cell.x > 13 or cell.y < 2 or cell.y > 25:
+					continue
+				if cell != center and _cell_hash(cell) % 2 == 0:
+					continue
+				grass_cells[cell] = true
+	for cell_value in grass_cells:
+		var cell := cell_value as Vector2i
+		var variation := _cell_hash(cell)
+		back_layer.set_cell(cell, DETAIL_SOURCE_ID, GRASS_BACK_TILES[variation % GRASS_BACK_TILES.size()])
+		var south_cell := cell + Vector2i.DOWN
+		if not grass_cells.has(south_cell) and variation % 3 != 0:
+			front_layer.set_cell(cell, DETAIL_SOURCE_ID, GRASS_FRONT_TILE)
+	back_layer.modulate = Color(0.4, 0.52, 0.31, 0.9)
+	front_layer.modulate = Color(0.46, 0.6, 0.32, 0.86)
+
+
 func _paint_walls(layer: TileMapLayer) -> void:
 	var wall_cells: Dictionary = {}
 	for y in range(3, 24):
@@ -203,8 +358,9 @@ func _paint_walls(layer: TileMapLayer) -> void:
 	]:
 		wall_cells[cell] = true
 
-	for cell in wall_cells.keys():
-		layer.set_cell(cell as Vector2i, WALL_SOURCE_ID, WALL_TILE)
+	var terrain_cells: Array[Vector2i] = []
+	terrain_cells.assign(wall_cells.keys())
+	layer.set_cells_terrain_connect(terrain_cells, WALL_TERRAIN_SET, WALL_TERRAIN, true)
 	layer.modulate = Color(0.74, 0.76, 0.84, 1.0)
 
 

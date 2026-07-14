@@ -15,12 +15,44 @@ func run(tree: SceneTree, context: RefCounted) -> void:
 	var details := arena.backdrop.get_node_or_null("PixelMapRoot/GroundDetail") as TileMapLayer
 	var walls := arena.backdrop.get_node_or_null("PixelMapRoot/Walls") as TileMapLayer
 	context.check(pixel_map != null and ground != null and details != null and walls != null, "荒寺地图按地表、细节、墙体拆分 TileMapLayer")
+	var tall_grass := arena.backdrop.get_node_or_null("TallGrassRoot") as TallGrassMap
+	var grass_back := arena.backdrop.get_node_or_null("TallGrassRoot/GrassBack") as TileMapLayer
+	var grass_front := arena.backdrop.get_node_or_null("TallGrassRoot/GrassFront") as TileMapLayer
+	context.check(tall_grass != null and grass_back != null and grass_front != null, "枯林使用独立前草与后草 TileMapLayer")
+	var front_grass_is_subset := grass_back != null and grass_front != null and grass_back.get_used_cells().size() >= 45 and not grass_front.get_used_cells().is_empty()
+	if grass_back != null and grass_front != null:
+		for front_cell in grass_front.get_used_cells():
+			front_grass_is_subset = front_grass_is_subset and grass_back.get_cell_source_id(front_cell) >= 0
+	context.check(front_grass_is_subset, "后草形成不规则交互草簇，静态前草只布置在草丛边缘")
+	context.check(grass_back != null and grass_front != null and grass_back.z_index < arena.player.visual.z_index and grass_front.z_index > arena.player.visual.z_index, "后草位于角色下方且前草只负责遮挡角色腿部")
 	context.check(ground != null and ground.get_used_cells().size() == 48 * 27, "48×27 个逻辑格完整覆盖战斗边界")
 	context.check(walls != null and not walls.get_used_cells().is_empty(), "瓦片墙层包含可见且带物理碰撞的墙体")
+	var map_tile_set := walls.tile_set if walls != null else null
+	context.check(map_tile_set != null and map_tile_set.get_terrain_sets_count() == 1 and map_tile_set.get_terrains_count(0) == 1 and map_tile_set.get_terrain_name(0, 0) == "荒寺石墙", "TileSet 面板提供可直接绘制的荒寺石墙 Terrain")
+	var wall_source := map_tile_set.get_source(3) as TileSetAtlasSource if map_tile_set != null else null
+	var terrain_tiles_have_collision := wall_source != null and wall_source.get_tiles_count() == 47
+	if wall_source != null:
+		for tile_index in range(wall_source.get_tiles_count()):
+			var tile_coord := wall_source.get_tile_id(tile_index)
+			var tile_data := wall_source.get_tile_data(tile_coord, 0)
+			terrain_tiles_have_collision = terrain_tiles_have_collision and tile_data.terrain_set == 0 and tile_data.terrain == 0 and tile_data.get_collision_polygons_count(0) == 1
+	context.check(terrain_tiles_have_collision, "47 个墙体 Terrain 组合均在 Physics Layer 0 配置整格碰撞")
 	context.check(arena.y_sort_enabled and arena.backdrop.y_sort_enabled and pixel_map != null and pixel_map.y_sort_enabled, "地图道具和角色共享 Y 排序链")
 	context.check(not arena.backdrop.is_point_clear(Vector2(-544.0, -512.0)), "瓦片墙体位置不可生成角色或掉落")
 	context.check(not arena.backdrop.is_point_clear(Vector2(-1352.0, -399.0)), "树干位置不可生成角色或掉落")
 	context.check(arena.backdrop.is_point_clear(Vector2.ZERO), "中央开放通道保持可通行")
+	if tall_grass != null and grass_back != null and not grass_back.get_used_cells().is_empty():
+		var grass_cell := grass_back.get_used_cells()[0]
+		var grass_world_position := grass_back.to_global(grass_back.map_to_local(grass_cell))
+		context.check(tall_grass.is_world_position_in_grass(grass_world_position), "草格可通过世界坐标稳定查询")
+		arena.player.global_position = grass_world_position
+		await tree.physics_frame
+		await tree.process_frame
+		context.check(bool(arena.player.get_meta("in_tall_grass", false)) and arena.player.get_node_or_null("TallGrassOcclusion") is Sprite2D, "玩家进入草丛后获得前草动态遮腿与摆动效果")
+		arena.player.global_position = Vector2.ZERO
+		await tree.physics_frame
+		await tree.process_frame
+		context.check(not bool(arena.player.get_meta("in_tall_grass", false)) and arena.player.get_node_or_null("TallGrassOcclusion") == null, "玩家离开草丛后清除前草动态效果")
 	context.check(arena.backdrop.zones.size() == 4, "荒寺地图显式包含山门、枯林、经阁、封印殿四区")
 	for id in [&"mountain_gate", &"withered_forest", &"sutra_library", &"seal_hall"]:
 		context.check(arena.backdrop.zones.get(id) is MapZone, "地图区域可按稳定 ID 查询：%s" % id)

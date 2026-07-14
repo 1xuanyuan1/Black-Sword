@@ -96,3 +96,17 @@
 ```powershell
 & 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-map-overview
 ```
+
+草丛入口把玩家放入枯林草格，用于检查后草、前草遮腿和动态摆动：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64.exe' --path 'E:\workspace\godotwork\Black-Sword' -- --qa-grass
+```
+
+地图生成器默认复用已有 TileSet，因此在 Godot 的 TileSet 面板中手工调整 Terrain 或 Physics Layer 后不会被普通地图重建覆盖。只有需要恢复生成器内置的 47 组合石墙 Terrain 时才显式重建 TileSet：
+
+```powershell
+& 'E:\Godot\Godot_v4.7-stable_win64_console.exe' --headless --path 'E:\workspace\godotwork\Black-Sword' --script res://tools/generate_abandoned_temple_map.gd -- --rebuild-tileset
+```
+
+只刷新 TileSet 而不覆盖当前瓦片场景时追加 `--tileset-only`。

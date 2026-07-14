@@ -1,7 +1,8 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=26 format=3]
 
 [ext_resource type="Script" path="res://scripts/arena_backdrop.gd" id="1_map"]
 [ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_tile_world.tscn" id="2_tile_world"]
+[ext_resource type="PackedScene" path="res://scenes/world/abandoned_temple_grass_world.tscn" id="2b_grass_world"]
 [ext_resource type="Texture2D" path="res://assets/world/Fog.png" id="3_fog"]
 [ext_resource type="Texture2D" path="res://assets/world/Raylight.png" id="4_ray"]
 [ext_resource type="Script" path="res://scripts/map_zone.gd" id="5_zone"]
@@ -50,6 +51,8 @@ y_sort_enabled = true
 script = ExtResource("1_map")
 
 [node name="PixelMapRoot" parent="." instance=ExtResource("2_tile_world")]
+
+[node name="TallGrassRoot" parent="." instance=ExtResource("2b_grass_world")]
 
 [node name="WorldCollisionLayer" type="Node2D" parent="."]
 editor_description = "保存可穿透规则独立于瓦片墙的树干实体碰撞。"

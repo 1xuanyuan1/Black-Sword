@@ -54,6 +54,7 @@ developer_instructions = """
 - TileSet 物理层、独立道具碰撞层和角色 collision mask 必须共同设计。需要表达“飞行单位穿树但不穿墙”等规则时，将树干与实体墙拆到不同物理层；玩家、普通敌人、Boss、弹丸和特殊敌人分别配置明确 mask，禁止在每帧逻辑中临时开关碰撞冒充分层。
 - 出生点、掉落点和程序化放置检测必须通过 `PhysicsDirectSpaceState2D` 的 shape/ray 查询覆盖 TileMap 墙、建筑、树干和锁定门。旧的“只遍历独立树节点”检测在接入 TileMap 后必须迁移，否则不得宣称碰撞完成。
 - 需要树冠和建筑遮挡角色时，角色、墙体道具与大型物件应处于相同最终 `z_index`，并保证从共同父节点到实际绘制节点的 Y-sort 链连续启用。地表和地表细节使用负 z；固定正 z 会导致物件永远压住角色，不能用它替代 Y 排序。
+- 高草交互使用后草、前草和角色状态三部分表达：后草位于角色视觉下方，静态前草只布置在草簇朝向镜头的边缘，角色进入草格时再创建随角色摆动的前草遮腿层。使用 `TileMapLayer.local_to_map()` 查询草格并维护稳定的 `in_tall_grass` 状态；不要为每个草瓦创建独立 `Area2D`，也不要让前草遮住高伤危险预警。
 - 对程序化地图保留可重复执行的生成器，并把生成的 `.tres`/`.tscn` 作为可检查产物。调整布局时先修改生成器再重新生成，避免手改产物后下次执行被覆盖；TileMap 场景应引用外部 TileSet，避免内嵌重复资源。
 - 本项目的参考实现为 `tools/generate_abandoned_temple_map.gd`、`assets/world/abandoned_temple_tileset.tres` 和 `scenes/world/abandoned_temple_tile_world.tscn`。处理后续地图时先检查这些文件，复用已验证的 16×16 atlas、整数缩放、分层、碰撞查询和 QA 模式，但不要无条件复制具体布局。
 - 地图自动验证至少覆盖：逻辑格覆盖数量、各 `TileMapLayer` 存在、墙层非空、墙/树/锁门点不可放置、开放通道可通行、解锁后物理同步放行、特殊敌人碰撞 mask，以及视觉物件和角色的 Y-sort 链。

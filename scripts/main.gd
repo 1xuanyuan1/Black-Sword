@@ -134,6 +134,9 @@ func _handle_qa_args() -> void:
 	elif "--qa-map-overview" in OS.get_cmdline_user_args():
 		call_deferred("_start_game")
 		call_deferred("_qa_prepare_map_overview")
+	elif "--qa-grass" in OS.get_cmdline_user_args():
+		call_deferred("_start_game")
+		call_deferred("_qa_prepare_grass")
 	elif "--qa-story" in OS.get_cmdline_user_args():
 		call_deferred("_qa_prepare_story")
 
@@ -298,6 +301,24 @@ func _qa_prepare_map_overview() -> void:
 		arena.backdrop.unlock_zone(zone_id)
 	for gate in arena.backdrop.gates.values():
 		(gate as ZoneGate).unlock()
+	ui_root.visible = false
+
+
+func _qa_prepare_grass() -> void:
+	if not OS.is_debug_build():
+		return
+	await get_tree().process_frame
+	await get_tree().create_timer(0.3).timeout
+	if not is_instance_valid(arena):
+		return
+	arena.spawn_timer = 9999.0
+	arena.player.invulnerability = 9999.0
+	var tall_grass := arena.backdrop.get_node_or_null("TallGrassRoot") as TallGrassMap
+	if tall_grass == null or tall_grass.grass_back.get_used_cells().is_empty():
+		return
+	var grass_cell := tall_grass.grass_back.get_used_cells()[tall_grass.grass_back.get_used_cells().size() / 2]
+	arena.player.global_position = tall_grass.grass_back.to_global(tall_grass.grass_back.map_to_local(grass_cell))
+	arena.player.follow_camera.zoom = Vector2.ONE * 1.25
 	ui_root.visible = false
 
 
